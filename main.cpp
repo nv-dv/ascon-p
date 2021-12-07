@@ -8,6 +8,7 @@
 #include "d_mask/dmask_ascon-p.h"
 #include "isapa128av20/opt_64/isap.h"
 #include "consts.h"
+#include <stdlib.h>
 #define CpB "\nCycles / bit: %f\n" 
 
 // state words x0..x4 (uint64), temporary variables t0..t4 (uint64)
@@ -74,9 +75,16 @@ INIT;
 
 int main(int argc, char* argv[])
 {
+	long count;
 	int slim = 0;
 	if (argc>=2 && argv[1][0]=='1')
 		slim = 1;
+	if (argc>=3 && strtol(argv[2], 0, 10)) {
+		count = strtol(argv[2], 0, 10);
+	}
+	else {
+		count = COUNT;
+	}
 	uint64_t before;
 	unsigned long eip;
 	uint64_t rand[100];
@@ -95,11 +103,11 @@ int main(int argc, char* argv[])
 			x[i] = i;
 		}
 		before = getCycles();
-		for (size_t i = 0; i < COUNT; i++)
+		for (size_t i = 0; i < count; i++)
 		{
 			_P12;
 		}
-		printf(CpB, (double)(getCycles()- before) / COUNT / BITS);
+		printf(CpB, (double)(getCycles()- before) / count / BITS);
 		printf("%.16llx %.16llx %.16llx %.16llx %.16llx\n", x[0], x[1], x[2], x[3], x[4]);
 		printf(">>>> 0\n");
 		randbuf.LoadMax();
@@ -111,11 +119,11 @@ int main(int argc, char* argv[])
 		}
 		Init2Shares(x, rand);
 		before = getCycles();
-		for (size_t i = 0; i < COUNT; i++)
+		for (size_t i = 0; i < count; i++)
 		{
 			_2S_P12;
 		}
-		printf(CpB, (double)(getCycles()- before) / COUNT / BITS);
+		printf(CpB, (double)(getCycles()- before) / count / BITS);
 		Get2Shares();
 		printf(">>>> %u\n", randbuf.GetSz()-randbuf.GetRdy());
 		randbuf.LoadMax();
@@ -127,11 +135,11 @@ int main(int argc, char* argv[])
 		}
 		Init4Shares(x, rand);
 		before = getCycles();
-		for (size_t i = 0; i < COUNT; i++)
+		for (size_t i = 0; i < count; i++)
 		{
 			_4S_P12;
 		}
-		printf(CpB, (double)(getCycles()- before) / COUNT / BITS);
+		printf(CpB, (double)(getCycles()- before) / count / BITS);
 		Get4Shares();
 		printf(">>>> %u\n", randbuf.GetSz()-randbuf.GetRdy());
 	}
@@ -144,11 +152,11 @@ int main(int argc, char* argv[])
 	}
 	InitDShares(x, rand);
 	before = getCycles();
-	for (size_t i = 0; i < COUNT; i++)
+	for (size_t i = 0; i < count; i++)
 	{
 		dS_P12;
 	}
-	printf(CpB, (double)(getCycles() - before) / COUNT / BITS);
+	printf(CpB, (double)(getCycles() - before) / count / BITS);
 	GetDShares();
 	printf(">>>> %u\n", randbuf.GetSz()-randbuf.GetRdy());
 
@@ -156,11 +164,11 @@ int main(int argc, char* argv[])
 	printf("usuba generic masking(d=%d)", MASKING_ORDER);
 	printf("\ncode-size: 0");
 	before = getCycles();
-	for (size_t i = 0; i < COUNT; i++)
+	for (size_t i = 0; i < count; i++)
 	{
 		bench_speed(i);
 	}
-	printf(CpB, (double)(getCycles() - before) / COUNT / BITS);
+	printf(CpB, (double)(getCycles() - before) / count / BITS);
 	usuba_get_shares();
 	printf(">>>> %u\n", randbuf.GetSz()-randbuf.GetRdy());
 	if (!slim) {
@@ -172,11 +180,11 @@ int main(int argc, char* argv[])
 	    x3 = 3;
 	    x4 = 4;
 	    before = getCycles();
-	    for (size_t i = 0; i < COUNT; i++)
+	    for (size_t i = 0; i < count; i++)
 	    {
 	        P12;
 	    }
-	    printf(CpB, (double)(getCycles() - before) / COUNT / BITS);
+	    printf(CpB, (double)(getCycles() - before) / count / BITS);
 	    printf("%.16llx %.16llx %.16llx %.16llx %.16llx\n", x0, x1, x2, x3, x4);
 	    printf(">>>> 0\n");
 	}

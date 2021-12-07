@@ -132,13 +132,7 @@ inline dshare dS_AND(dshare* p1, dshare* p2) {
 	{
 		for (size_t j = 0; j < (d & 0xfe); j+=2)
 		{
-			asm("
-				movhpd xmm0, %1;\n
-                movlpd xmm0, %1;\n
-				movdqu xmm1, %2;\n
-				andpd xmm0, xmm1;\n
-				movdqu local0, xmm0;\n
-			":"=m"(ptr1):"m"(ptr1[i]), "m"(ptr2):)
+			asm("movhpd xmm0, %1;\nmovlpd xmm0, %1;\nmovdqu xmm1, %2;\nandpd xmm0, xmm1;\nmovdqu local0, xmm0;\n":"=m"(ptr1):"m"(ptr1[i]), "m"(ptr2):)
 			m[i][j] ^= local0[0];
 			m[i][j + 1] ^= local0[1];
 			ptr2 += 2;
