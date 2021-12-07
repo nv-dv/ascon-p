@@ -1,0 +1,184 @@
+// ascon-p.cpp : This file contains the 'main' function. Program execution begins and ends there.
+//
+
+#include "RandomBuffer/RandomBuffer.h"
+#include "sse_ascon-p.h"
+#include "sse2_mask/2mask_ascon-p.h"
+#include "avx2_mask/4mask_ascon-p.h"
+#include "d_mask/dmask_ascon-p.h"
+#include "isapa128av20/opt_64/isap.h"
+#include "consts.h"
+#define CpB "\nCycles / bit: %f\n" 
+
+// state words x0..x4 (uint64), temporary variables t0..t4 (uint64)
+// 0
+//x2 ^= c
+//x0 ^= x4; //1 x4 ^= x3;    x2 ^= x1;
+// 2
+//t0 = x0;    t1 = x1;    t2 = x2;    t3 = x3;    t4 = x4;
+// 3
+//t0 = ~t0;    t1 = ~t1;    t2 = ~t2;    t3 = ~t3;    t4 = ~t4;
+//t0 &= x1;    t1 &= x2;    t2 &= x3;    t3 &= x4;    t4 &= x0;
+// 4
+//x0 ^= t1;    x1 ^= t2;    x2 ^= t3;    x3 ^= t4;    x4 ^= t0;
+// 5
+//x1 ^= x0;    x0 ^= x4;    x3 ^= x2;    x2 = ~x2;
+// linear layer
+//t0 = x0 ^ ROTR(x0, 28);
+//t1 = x1 ^ ROTR(x1, 39);
+//t2 = x2 ^ ROTR(x2, 6);
+//t3 = x3 ^ ROTR(x3, 17);
+//t4 = x4 ^ ROTR(x4, 41);
+//t0 ^= ROTR(x0, 19);
+//t1 ^= ROTR(x1, 61);
+//t2 ^= ROTR(x2, 1);
+//t3 ^= ROTR(x3, 10);
+//t4 ^= ROTR(x4, 7);
+//for (int i = 0;i < 5;++i) x[i] = t[i];
+//(? ? ? ) x2 = not x2	
+
+extern void bench_speed(size_t count);
+extern void usuba_get_shares();
+
+uint64_t getCycles() {
+	uint32_t lo, hi;
+    asm volatile ("rdtsc":"=a"(lo),"=d"(hi));
+    return ((uint64_t)hi << 32) | lo;
+    //#ifdef __X86_64__
+        //asm volatile ("shl %0, 32":"=d"(hi));
+        //asm volatile ("or %0, %1":"=d"(low):"d"(hi));
+    //#endif
+}
+
+unsigned long getInstruction() {
+	#if defined(__i386__)
+		uint32_t addr;
+		asm volatile ("mov %0, [ebp+4]":"=a"(addr)::);
+		return addr;
+	#endif
+	#if defined(__x86_64__)
+		uint64_t addr;
+		asm volatile ("mov %0, [rbp+8]":"=a"(addr)::);
+		return addr;
+	#endif
+}
+
+#define BENCH_CODESZ(func, offset) \
+	eip = getInstruction(); \
+	func; \
+	eip = getInstruction()-eip; \
+	printf("\ncode-size: %u", eip); \
+
+// defining variables
+INIT;
+
+int main(int argc, char* argv[])
+{
+	int slim = 0;
+	if (argc>=2 && argv[1][0]=='1')
+		slim = 1;
+	uint64_t before;
+	unsigned long eip;
+	uint64_t rand[100];
+	//printf("-----begin testbed-----\n");
+	for (size_t i = 0; i < 100; i++)
+	{
+		rand[i] = 0x4141414141414141+i;
+	}
+	//printf("-----end testbed-----\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+	// -----------------------------
+	if (!slim) {
+		printf("my sse asm");
+		BENCH_CODESZ(_P12, 0);
+		for (size_t i = 0; i < 5; i++)
+		{
+			x[i] = i;
+		}
+		before = getCycles();
+		for (size_t i = 0; i < COUNT; i++)
+		{
+			_P12;
+		}
+		printf(CpB, (double)(getCycles()- before) / COUNT / BITS);
+		printf("%.16llx %.16llx %.16llx %.16llx %.16llx\n", x[0], x[1], x[2], x[3], x[4]);
+		printf(">>>> 0\n");
+		randbuf.LoadMax();
+		printf("my xmm masking(d=2)");
+		BENCH_CODESZ(_2S_P12, 0);
+		for (size_t i = 0; i < 5; i++)
+		{
+			x[i] = i;
+		}
+		Init2Shares(x, rand);
+		before = getCycles();
+		for (size_t i = 0; i < COUNT; i++)
+		{
+			_2S_P12;
+		}
+		printf(CpB, (double)(getCycles()- before) / COUNT / BITS);
+		Get2Shares();
+		printf(">>>> %u\n", randbuf.GetSz()-randbuf.GetRdy());
+		randbuf.LoadMax();
+		printf("my ymm masking(d=4)");
+		BENCH_CODESZ(_4S_P12, 0);
+		for (size_t i = 0; i < 5; i++)
+		{
+			x[i] = i;
+		}
+		Init4Shares(x, rand);
+		before = getCycles();
+		for (size_t i = 0; i < COUNT; i++)
+		{
+			_4S_P12;
+		}
+		printf(CpB, (double)(getCycles()- before) / COUNT / BITS);
+		Get4Shares();
+		printf(">>>> %u\n", randbuf.GetSz()-randbuf.GetRdy());
+	}
+	randbuf.LoadMax();
+	printf("C generic masking(d=%d)", MASKING_ORDER);
+	printf("\ncode-size: 0");
+	for (size_t i = 0; i < 5; i++)
+	{
+		x[i] = i;
+	}
+	InitDShares(x, rand);
+	before = getCycles();
+	for (size_t i = 0; i < COUNT; i++)
+	{
+		dS_P12;
+	}
+	printf(CpB, (double)(getCycles() - before) / COUNT / BITS);
+	GetDShares();
+	printf(">>>> %u\n", randbuf.GetSz()-randbuf.GetRdy());
+
+	randbuf.LoadMax();
+	printf("usuba generic masking(d=%d)", MASKING_ORDER);
+	printf("\ncode-size: 0");
+	before = getCycles();
+	for (size_t i = 0; i < COUNT; i++)
+	{
+		bench_speed(i);
+	}
+	printf(CpB, (double)(getCycles() - before) / COUNT / BITS);
+	usuba_get_shares();
+	printf(">>>> %u\n", randbuf.GetSz()-randbuf.GetRdy());
+	if (!slim) {
+		printf("opt_64");
+		BENCH_CODESZ(P12, 0);
+	    x0 = 0;
+	    x1 = 1;
+	    x2 = 2;
+	    x3 = 3;
+	    x4 = 4;
+	    before = getCycles();
+	    for (size_t i = 0; i < COUNT; i++)
+	    {
+	        P12;
+	    }
+	    printf(CpB, (double)(getCycles() - before) / COUNT / BITS);
+	    printf("%.16llx %.16llx %.16llx %.16llx %.16llx\n", x0, x1, x2, x3, x4);
+	    printf(">>>> 0\n");
+	}
+    return 0;
+}
