@@ -237,12 +237,12 @@ share_2 st4;
 	asm volatile ("movq xmm1, %0"::"m"(C_not):);  \
 	asm volatile ("xorpd xmm0, xmm1":::);  \
 	asm volatile ("movdqu %0, xmm0":"=m"(sx2)::);  \
-		/*6*/\
-		_2S_LDL(sx0, 19, 28) \
-		_2S_LDL(sx1, 39, 61) \
-		_2S_LDL(sx2, 1, 6) \
-		_2S_LDL(sx3, 10, 17) \
-		_2S_LDL(sx4, 7, 41) \
+	/*6*/\
+	_2S_LDL(sx0, 19, 28) \
+	_2S_LDL(sx1, 39, 61) \
+	_2S_LDL(sx2, 1, 6) \
+	_2S_LDL(sx3, 10, 17) \
+	_2S_LDL(sx4, 7, 41) \
 	/*end*/ \
 
 #define _2S_P12 \
