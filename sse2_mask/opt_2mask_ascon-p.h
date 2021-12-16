@@ -128,60 +128,95 @@ share_2 st4;
 	asm("psllq xmm4, %0"::"i"(64-i):);  \
 	asm("orpd xmm3, xmm4":::);  \
 
-#define _2S_LDL(p_share, rot1, rot2) \
-	_2S_ROTR1(p_share, rot1) \
-	asm("movdqa xmm2, xmm0":::);  \
-	/* TODO: add refresh */ \
-	_2S_ROTR2(p_share, rot2) \
-	asm("xorpd xmm2, xmm3":::);  \
+#define _2S_LDL1(p_share, rot1, rot2) \
+	/*_2S_ROTR1(p_share, rot1)*/ \
+	/*_2S_ROTR2(p_share, rot2)*/ \
+	asm("movdqu xmm0, %0"::"m"(p_share):);  \
+	asm("movdqu xmm3, %0"::"m"(p_share):);  \
+	asm("movdqu xmm1, xmm0":::);  \
+	asm("movdqu xmm4, xmm3":::);  \
+	asm("psrlq xmm0, %0"::"i"(rot1):);  \
+	asm("psllq xmm1, %0"::"i"(64-rot1):);  \
+	asm("psrlq xmm3, %0"::"i"(rot2):);  \
+	asm("psllq xmm4, %0"::"i"(64-rot2):);  \
+	asm("orpd xmm0, xmm1":::);  \
+	asm("orpd xmm3, xmm4":::);  \
+	asm("vxorpd xmm2, xmm0, xmm3":::);  \
 	asm("movdqu xmm3, %0"::"m"(p_share):);  \
 	asm("xorpd xmm2, xmm3":::);  \
 	asm("movdqu %0, xmm2":"=m"(p_share)::);  \
 
+#define _2S_LDL2(p_share, rot1, rot2) \
+	/*_2S_ROTR1(p_share, rot1)*/ \
+	/*_2S_ROTR2(p_share, rot2)*/ \
+	asm("movdqu xmm5, %0"::"m"(p_share):);  \
+	asm("movdqu xmm8, %0"::"m"(p_share):);  \
+	asm("movdqu xmm6, xmm5":::);  \
+	asm("movdqu xmm9, xmm8":::);  \
+	asm("psrlq xmm5, %0"::"i"(rot1):);  \
+	asm("psllq xmm6, %0"::"i"(64-rot1):);  \
+	asm("psrlq xmm8, %0"::"i"(rot2):);  \
+	asm("psllq xmm9, %0"::"i"(64-rot2):);  \
+	asm("orpd xmm5, xmm6":::);  \
+	asm("orpd xmm8, xmm9":::);  \
+	asm("vxorpd xmm7, xmm5, xmm8":::);  \
+	asm("movdqu xmm8, %0"::"m"(p_share):);  \
+	asm("xorpd xmm7, xmm8":::);  \
+	asm("movdqu %0, xmm7":"=m"(p_share)::);  \
+
+#define _2S_LDL3(p_share, rot1, rot2) \
+	/*_2S_ROTR1(p_share, rot1)*/ \
+	/*_2S_ROTR2(p_share, rot2)*/ \
+	asm("movdqu xmm10, %0"::"m"(p_share):);  \
+	asm("movdqu xmm13, %0"::"m"(p_share):);  \
+	asm("movdqu xmm11, xmm10":::);  \
+	asm("movdqu xmm14, xmm13":::);  \
+	asm("psrlq xmm10, %0"::"i"(rot1):);  \
+	asm("psllq xmm11, %0"::"i"(64-rot1):);  \
+	asm("psrlq xmm13, %0"::"i"(rot2):);  \
+	asm("psllq xmm14, %0"::"i"(64-rot2):);  \
+	asm("orpd xmm10, xmm11":::);  \
+	asm("orpd xmm13, xmm14":::);  \
+	asm("vxorpd xmm12, xmm10, xmm13":::);  \
+	asm("movdqu xmm13, %0"::"m"(p_share):);  \
+	asm("xorpd xmm12, xmm13":::);  \
+	asm("movdqu %0, xmm12":"=m"(p_share)::);  \
+
 #define _2S_ROUND(c) \
 	C = c;\
 	/*0*/\
-	asm("movdqu xmm0, %0"::"m"(sx2):);  \
-	asm("movq xmm1, %0"::"m"(C):);  \
-	asm("xorpd xmm0, xmm1":::);  \
-	asm("movdqu %0, xmm0":"=m"(sx2)::);  \
-	/*_2S_XOR(sx0, sx4)*/ \
-	asm("movdqu xmm2, %0"::"m"(sx0):);  \
-	asm("movdqu xmm3, %0"::"m"(sx4):);  \
-	asm("xorpd xmm2, xmm3":::);  \
-	asm("movdqu %0, xmm2":"=m"(sx0)::);  \
-	/*_2S_XOR(sx4, sx3)*/ \
-	asm("movdqu xmm4, %0"::"m"(sx4):);  \
-	asm("movdqu xmm5, %0"::"m"(sx3):);  \
-	asm("xorpd xmm4, xmm5":::);  \
-	asm("movdqu %0, xmm4":"=m"(sx4)::);  \
-	/*_2S_XOR(sx2, sx1)*/ \
-	asm("movdqu xmm6, %0"::"m"(sx2):);  \
-	asm("movdqu xmm7, %0"::"m"(sx1):);  \
-	asm("xorpd xmm6, xmm7":::);  \
-	asm("movdqu %0, xmm6":"=m"(sx2)::);  \
+	asm("vmovdqu xmm0, %0"::"m"(sx0):);  \
+	asm("vmovdqu xmm1, %0"::"m"(sx1):);  \
+	asm("vmovdqu xmm2, %0"::"m"(sx2):);  \
+	asm("vmovdqu xmm3, %0"::"m"(sx3):);  \
+	asm("vmovdqu xmm4, %0"::"m"(sx4):);  \
+	asm("vmovq xmm5, %0"::"m"(C):);  \
+	asm("xorpd xmm2, xmm5":::);  \
+	asm("xorpd xmm0, xmm4":::);  \
+	asm("xorpd xmm4, xmm3":::);  \
+	asm("xorpd xmm2, xmm1":::);  \
+	asm("vmovdqu %0, xmm0":"=m"(sx0)::);  \
+	asm("vmovdqu %0, xmm1":"=m"(sx1)::);  \
+	asm("vmovdqu %0, xmm2":"=m"(sx2)::);  \
+	asm("vmovdqu %0, xmm3":"=m"(sx3)::);  \
+	asm("vmovdqu %0, xmm4":"=m"(sx4)::);  \
 	/*2*/\
 	/*_2S_NOT(sx0)*/ \
-	asm("movdqu xmm0, %0"::"m"(sx0):);  \
-	asm("movq xmm1, %0"::"m"(C_not):);  \
-	asm("xorpd xmm0, xmm1":::);  \
-	asm("movdqu %0, xmm0":"=m"(st0)::);  \
-	/*_2S_NOT(sx1)*/ \
-	asm("movdqu xmm2, %0"::"m"(sx1):);  \
-	asm("xorpd xmm2, xmm1":::);  \
-	asm("movdqu %0, xmm2":"=m"(st1)::);  \
+	asm("movq xmm5, %0"::"m"(C_not):);  \
+	asm("vxorpd xmm10, xmm0, xmm5":::);  \
+	/*_2S_NOT(sx1)*/  \
+	asm("vxorpd xmm11, xmm1, xmm5":::);  \
 	/*_2S_NOT(sx2)*/ \
-	asm("movdqu xmm4, %0"::"m"(sx2):);  \
-	asm("xorpd xmm4, xmm1":::);  \
-	asm("movdqu %0, xmm4":"=m"(st2)::);  \
+	asm("vxorpd xmm12, xmm2, xmm5":::);  \
 	/*_2S_NOT(sx3)*/ \
-	asm("movdqu xmm6, %0"::"m"(sx3):);  \
-	asm("xorpd xmm6, xmm1":::);  \
-	asm("movdqu %0, xmm6":"=m"(st3)::);  \
+	asm("vxorpd xmm13, xmm3, xmm5":::);  \
 	/*_2S_NOT(sx4)*/ \
-	asm("movdqu xmm0, %0"::"m"(sx4):);  \
-	asm("xorpd xmm0, xmm1":::);  \
-	asm("movdqu %0, xmm0":"=m"(st4)::);  \
+	asm("vxorpd xmm14, xmm4, xmm5":::);  \
+	asm("movdqu %0, xmm10":"=m"(st0)::);  \
+	asm("movdqu %0, xmm11":"=m"(st1)::);  \
+	asm("movdqu %0, xmm12":"=m"(st2)::);  \
+	asm("movdqu %0, xmm13":"=m"(st3)::);  \
+	asm("movdqu %0, xmm14":"=m"(st4)::);  \
 	/*3*/\
 	/*LOAD R*/\
 	randbuf.GetBytes((uint8_t*)R2, sizeof(R2)); \
@@ -194,55 +229,44 @@ share_2 st4;
 	/*_2S_XOR(sx0, st1)*/ \
 	asm("movdqu xmm0, %0"::"m"(sx0):);  \
 	asm("movdqu xmm1, %0"::"m"(st1):);  \
-	asm("xorpd xmm0, xmm1":::);  \
-	asm("movdqu %0, xmm0":"=m"(sx0)::);  \
-	/*_2S_XOR(sx1, st2)*/ \
 	asm("movdqu xmm2, %0"::"m"(sx1):);  \
 	asm("movdqu xmm3, %0"::"m"(st2):);  \
-	asm("xorpd xmm2, xmm3":::);  \
-	asm("movdqu %0, xmm2":"=m"(sx1)::);  \
-	/*_2S_XOR(sx2, st3)*/ \
 	asm("movdqu xmm4, %0"::"m"(sx2):);  \
 	asm("movdqu xmm5, %0"::"m"(st3):);  \
-	asm("xorpd xmm4, xmm5":::);  \
-	asm("movdqu %0, xmm4":"=m"(sx2)::);  \
-	/*_2S_XOR(sx3, st4)*/ \
 	asm("movdqu xmm6, %0"::"m"(sx3):);  \
 	asm("movdqu xmm7, %0"::"m"(st4):);  \
-	asm("xorpd xmm6, xmm7":::);  \
-	asm("movdqu %0, xmm6":"=m"(sx3)::);  \
-	/*_2S_XOR(sx4, st0)*/ \
-	asm("movdqu xmm0, %0"::"m"(sx4):);  \
-	asm("movdqu xmm1, %0"::"m"(st0):);  \
+	asm("movdqu xmm8, %0"::"m"(sx4):);  \
+	asm("movdqu xmm9, %0"::"m"(st0):);  \
 	asm("xorpd xmm0, xmm1":::);  \
-	asm("movdqu %0, xmm0":"=m"(sx4)::);  \
+	/*_2S_XOR(sx1, st2)*/ \
+	asm("xorpd xmm2, xmm3":::);  \
+	/*_2S_XOR(sx2, st3)*/ \
+	asm("xorpd xmm4, xmm5":::);  \
+	/*_2S_XOR(sx3, st4)*/ \
+	asm("xorpd xmm6, xmm7":::);  \
+	/*_2S_XOR(sx4, st0)*/ \
+	asm("xorpd xmm8, xmm9":::);  \
 	/*5*/\
 	/*_2S_XOR(sx1, sx0)*/ \
-	asm("movdqu xmm2, %0"::"m"(sx1):);  \
-	asm("movdqu xmm3, %0"::"m"(sx0):);  \
-	asm("xorpd xmm2, xmm3":::);  \
-	asm("movdqu %0, xmm2":"=m"(sx1)::);  \
+	asm("xorpd xmm2, xmm0":::);  \
 	/*_2S_XOR(sx0, sx4)*/ \
-	asm("movdqu xmm4, %0"::"m"(sx0):);  \
-	asm("movdqu xmm5, %0"::"m"(sx4):);  \
-	asm("xorpd xmm4, xmm5":::);  \
-	asm("movdqu %0, xmm4":"=m"(sx0)::);  \
+	asm("xorpd xmm0, xmm8":::);  \
 	/*_2S_XOR(sx3, sx2)*/ \
-	asm("movdqu xmm6, %0"::"m"(sx3):);  \
-	asm("movdqu xmm7, %0"::"m"(sx2):);  \
-	asm("xorpd xmm6, xmm7":::);  \
-	asm("movdqu %0, xmm6":"=m"(sx3)::);  \
+	asm("xorpd xmm6, xmm4":::);  \
 	/*_2S_NOT(sx2)*/ \
-	asm("movdqu xmm0, %0"::"m"(sx2):);  \
-	asm("movq xmm1, %0"::"m"(C_not):);  \
-	asm("xorpd xmm0, xmm1":::);  \
-	asm("movdqu %0, xmm0":"=m"(sx2)::);  \
+	asm("movq xmm10, %0"::"m"(C_not):);  \
+	asm("vxorpd xmm4, xmm4, xmm10":::);  \
+	asm("movdqu %0, xmm0":"=m"(sx0)::);  \
+	asm("movdqu %0, xmm2":"=m"(sx1)::);  \
+	asm("movdqu %0, xmm4":"=m"(sx2)::);  \
+	asm("movdqu %0, xmm6":"=m"(sx3)::);  \
+	asm("movdqu %0, xmm8":"=m"(sx4)::);  \
 	/*6*/\
-	_2S_LDL(sx0, 19, 28) \
-	_2S_LDL(sx1, 39, 61) \
-	_2S_LDL(sx2, 1, 6) \
-	_2S_LDL(sx3, 10, 17) \
-	_2S_LDL(sx4, 7, 41) \
+	_2S_LDL1(sx0, 19, 28) \
+	_2S_LDL2(sx1, 39, 61) \
+	_2S_LDL3(sx2, 1, 6) \
+	_2S_LDL1(sx3, 10, 17) \
+	_2S_LDL2(sx4, 7, 41) \
 	/*end*/ \
 
 #define _2S_P12 \
