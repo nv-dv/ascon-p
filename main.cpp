@@ -3,8 +3,13 @@
 
 #include "RandomBuffer/RandomBuffer.h"
 #include "sse_ascon-p.h"
-#include "sse2_mask/2mask_ascon-p.h"
-#include "avx2_mask/4mask_ascon-p.h"
+#if defined(__x86_64__)
+	#include "sse2_mask/opt_2mask_ascon-p.h"
+	#include "avx2_mask/opt_4mask_ascon-p.h"
+#else
+	#include "sse2_mask/2mask_ascon-p.h"
+	#include "avx2_mask/4mask_ascon-p.h"
+#endif
 #include "d_mask/dmask_ascon-p.h"
 #include "isapa128av20/opt_64/isap.h"
 #include "consts.h"

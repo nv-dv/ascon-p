@@ -2,5 +2,5 @@
 #define OPTIMIZE_SSE2
 #define REFRESH2
 #define POOLING
-#define COUNT 30000
+#define COUNT 200000 / MASKING_ORDER
 #define BITS 320
