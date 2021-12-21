@@ -30,7 +30,7 @@ for d in range(drange[0], drange[1]+1):
     s = '\n'.join(s)
     with open("consts.h", "w") as f:
         f.write(s)
-    os.system(f"g++ -m{p} -O0 -fno-builtin -masm=intel main.cpp RandomBuffer/*.cpp usuba_mask/masked_ascon_ua_vslice.c -o release/main{p}.o")
+    os.system(f"g++ -m{p} -O2 -fno-builtin -masm=intel main.cpp RandomBuffer/*.cpp usuba_mask/masked_ascon_ua_vslice.c -o release/main{p}.o")
     
     c_output = subprocess.run(["nm", "-S", f"./release/main{p}.o"], capture_output=True)
     stdout = c_output.stdout.decode().split('\n')
