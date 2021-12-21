@@ -22,7 +22,7 @@ public:
 	~RandomBuffer();
 	void LoadRandom(uint32_t bytes);
 	void LoadMax();
-	void LoadFromBuffer(uint8_t* buffer, int len);
+	void LoadFromBuffer(uint8_t* buffer, uint32_t len);
 	uint64_t GetQWORD();
 	uint32_t GetDWORD();
 	void GetBytes(void* to, size_t len);

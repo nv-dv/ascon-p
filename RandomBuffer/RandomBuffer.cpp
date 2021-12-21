@@ -8,8 +8,10 @@ int _internal() {
 	int tmp;
 	if (fd == -1)
 		return -1;
-	read(fd, &tmp, 2);  // can read up to 4 bytes
-	return tmp;
+	if (read(fd, &tmp, 2))  // can read up to 4 bytes
+		return tmp;
+	else
+		return -1;
 }
 
 RandomBuffer::RandomBuffer(uint32_t szBuff)
@@ -50,19 +52,19 @@ RandomBuffer::~RandomBuffer()
 
 void RandomBuffer::LoadRandom(uint32_t bytes)
 {
-	uint32_t tmp;
 	if (szRDY + bytes > szRNG) {
 		// can't load so many random bytes
 		bytes = szRNG - szRDY;
 	}
 	head = (uint8_t*)(buffer + ((size_t)head - (size_t)buffer - bytes) % szRNG);
-	read(fd, head, bytes);
+	if (read(fd, head, bytes) == -1)
+		exit(12);
 	szRDY += bytes;
 }
 void RandomBuffer::LoadMax() {
 	this->LoadRandom(this->szRNG);
 }
-void RandomBuffer::LoadFromBuffer(uint8_t* extBuffer, int len)
+void RandomBuffer::LoadFromBuffer(uint8_t* extBuffer, uint32_t len)
 {
 	if (szRDY + len > szRNG) {
 		len = szRNG - szRDY;
