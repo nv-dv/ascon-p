@@ -32,7 +32,7 @@ inline void refresh(dshare* p1, dshare* p2, RandomBuffer* rb) {
 	uint64_t tmp;
 	// get random
 	for (size_t i = 0; i < MASKING_ORDER; i++) {s[i] = rb->GetQWORD();}
-	tmp = s[d-1];
+	tmp = s[MASKING_ORDER-1];
 	// rotate
 	for (size_t i = MASKING_ORDER - 1; i > 0; i--) {s[i] = s[i] ^ s[i - 1];}
 	s[0] = s[0] ^ tmp;
