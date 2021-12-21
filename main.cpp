@@ -13,6 +13,7 @@
 #include "d_mask/dmask_ascon-p.h"
 #include "isapa128av20/opt_64/isap.h"
 #include "consts.h"
+#include <stdio.h>
 #include <stdlib.h>
 #define CpB "\nCycles / bit: %f\n" 
 
@@ -64,7 +65,7 @@ unsigned long getInstruction() {
 	#endif
 	#if defined(__x86_64__)
 		uint64_t addr;
-		asm volatile ("mov %0, [rbp+8]":"=a"(addr)::);
+		asm volatile ("lea %0, [rip]":"=a"(addr)::);
 		return addr;
 	#endif
 }
@@ -80,7 +81,9 @@ INIT;
 
 int main(int argc, char* argv[])
 {
-	long count;
+	#if defined(__x86_64__)
+	#endif
+	size_t count;
 	int slim = 0;
 	if (argc>=2 && argv[1][0]=='1')
 		slim = 1;
