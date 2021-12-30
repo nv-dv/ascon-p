@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 from scipy.io import savemat
+from matplotlib import pyplot as plt
 import argparse
 import subprocess
 import os
@@ -9,12 +10,12 @@ usuba_funcs = {"isw_mult":0, "Sbox__V64":0, "AddConstant__V64":0, "LinearLayer__
 gen_funcs = {"dS_AND":0, "dS_ROUND":0 }
 
 parser = argparse.ArgumentParser(description='Codesize of various implementations of ISAP permutation block.')
-parser.add_argument('--bits', choices=['32', '64'], default=['64'], nargs=1, help='compile for 32/64 bit')
+parser.add_argument('--arch', choices=['32', '64', 'armv7', 'aarch64'], default=['64'], nargs=1, help='compile for 32/64 bit; compile for armv7/aarch64;')
 parser.add_argument('--maskrange', type=int, default=[2, 2], nargs=2, metavar='N', help='masking order range')
 parser.add_argument('-v', help='verbose', action='store_true')
 
 nmsp = vars(parser.parse_args())
-p = nmsp['bits'][0]
+p = nmsp['arch'][0]
 drange = nmsp['maskrange']
 verbose = nmsp['v']
 
@@ -30,9 +31,14 @@ for d in range(drange[0], drange[1]+1):
     s = '\n'.join(s)
     with open("consts.h", "w") as f:
         f.write(s)
-    os.system(f"g++ -m{p} -O2 -fno-builtin -masm=intel main.cpp RandomBuffer/*.cpp usuba_mask/masked_ascon_ua_vslice.c -o release/main{p}.o")
-    
-    c_output = subprocess.run(["nm", "-S", f"./release/main{p}.o"], capture_output=True)
+    if p in ['32', '64']:
+        os.system(f"wsl g++ -m{p} -O3 -fno-builtin -masm=intel ascon-p/main.cpp ascon-p/RandomBuffer/*.cpp ascon-p/usuba_mask/masked_ascon_ua_vslice.c -o ascon-p/release/main_{p}.o")
+    elif p=='aarch64':
+        os.system(f"wsl aarch64-linux-gnu-g++ -fno-builtin -O3 -static -Wformat=0 ./ascon-p/arm_main.cpp ./ascon-p/RandomBuffer/*.cpp ./ascon-p/usuba_mask/masked_ascon_ua_vslice.c -o ./ascon-p/release/main_{p}.o")
+    elif p=='armv7':
+        os.system(f"wsl arm-linux-gnueabihf-g++ -fno-builtin -O3 -static -Wformat=0 ./ascon-p/arm_main.cpp ./ascon-p/RandomBuffer/*.cpp ./ascon-p/usuba_mask/masked_ascon_ua_vslice.c -o ./ascon-p/release/main_{p}.o")
+
+    c_output = subprocess.run(["wsl", "nm", "-S", f"./ascon-p/release/main_{p}.o"], capture_output=True)
     stdout = c_output.stdout.decode().split('\n')
     for line in stdout:
         func = line.split(" ")[-1]
@@ -48,11 +54,14 @@ for d in range(drange[0], drange[1]+1):
                 gen_funcs[sig] = size
                 if verbose:
                     print(f"{sig}: {size}")
-
-    y1.append(gen_funcs["dS_ROUND"]+12*5*gen_funcs["dS_AND"])
+    if p in ['32', '64']:
+        usuba_funcs["LinearLayer__V64"] = 0
+    #         or 74 or 100
+    y1.append(130+12*(gen_funcs["dS_ROUND"]+5*gen_funcs["dS_AND"]))
     if verbose:
         print(f"generic C codesize(d={d}): ", y1[-1])
-    y2.append(usuba_funcs["ascon12"]+12*(usuba_funcs["AddConstant__V64"]+usuba_funcs["Sbox__V64"]+usuba_funcs["LinearLayer__V64"]+5*usuba_funcs["isw_mult"]))
+    # y2.append(usuba_funcs["ascon12"]+12*(usuba_funcs["AddConstant__V64"]+usuba_funcs["Sbox__V64"]+usuba_funcs["LinearLayer__V64"]+5*usuba_funcs["isw_mult"]))
+    y2.append(usuba_funcs["ascon12"]+12*(usuba_funcs["Sbox__V64"]+usuba_funcs["LinearLayer__V64"]+5*usuba_funcs["isw_mult"]))
     if verbose:
         print(f"usuba codesize(d={d}): ", y2[-1])
 
@@ -61,4 +70,6 @@ print("---->")
 print(f"{x=}")
 print(f"{y1=}")
 print(f"{y2=}")
-savemat(f"./results/codesize{p}.mat", {"d": x, "gc": y1, "uc": y2})
+plt.plot(x, y1, x, y2)
+plt.show()
+savemat(f".\\results\\codesize_{p}.mat", {"d": x, "gc": y1, "uc": y2})
