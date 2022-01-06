@@ -100,28 +100,28 @@ share_4 sst4;
 
 // xor share1, share2 --> ymm0
 #define _4S_XOR(p_share1, p_share2) \
-	asm volatile("vmovdqu ymm0, %0"::"m"(p_share1):);  \
-	asm volatile("vmovdqu ymm1, %0"::"m"(p_share2):);  \
+	asm volatile("vmovdqa ymm0, %0"::"m"(p_share1):);  \
+	asm volatile("vmovdqa ymm1, %0"::"m"(p_share2):);  \
 	asm volatile("vxorpd ymm0, ymm0, ymm1":::);  \
 
 // not with xor 0xff..ff --> ymm0
 #define _4S_NOT(p_share) \
-	asm volatile("vmovdqu ymm0, %0"::"m"(p_share):);  \
+	asm volatile("vmovdqa ymm0, %0"::"m"(p_share):);  \
 	D[3] = C_not;  \
-	asm volatile("vmovdqu ymm1, %0"::"m"((((__m256*)D)[0])):);  \
+	asm volatile("vmovdqa ymm1, %0"::"m"((((__m256*)D)[0])):);  \
 	asm volatile("vxorpd ymm0, ymm0, ymm1":::);  \
 
 // and of shares 1 and 2 --> res_share
 #define _4S_AND1(p_share1, p_share2, res_share, i) \
 	/* Inputs refresh */ \
-	asm ("vmovdqu ymm4, %0"::"m"((((__m256*)R4)[i])):);  \
-	asm ("vmovdqu ymm0, %0"::"m"(p_share1):);  \
-	asm ("vmovdqu ymm3, %0"::"m"(p_share2):);  \
+	asm ("vmovdqa ymm4, %0"::"m"((((__m256*)R4)[i])):);  \
+	asm ("vmovdqa ymm0, %0"::"m"(p_share1):);  \
+	asm ("vmovdqa ymm3, %0"::"m"(p_share2):);  \
 	asm ("vxorpd ymm1, ymm1, ymm1":::);  \
 	asm ("vxorpd ymm0, ymm0, ymm4":::);  \
 	_ymm4_rotr() \
 	asm ("vxorpd ymm0, ymm0, ymm4":::);  \
-	asm ("vmovdqu ymm4, %0"::"m"((((__m256*)R4)[i+1])):);  \
+	asm ("vmovdqa ymm4, %0"::"m"((((__m256*)R4)[i+1])):);  \
 	/*body of AND gate*/   \
 	/* Do 4 times */  \
 	asm ("vandpd ymm2, ymm0, ymm3":::);  \
@@ -142,18 +142,18 @@ share_4 sst4;
 	asm ("vandpd ymm2, ymm0, ymm3":::);  \
 	asm ("vxorpd ymm1, ymm1, ymm2":::);  \
 	/* Write results */  \
-	asm ("vmovdqu %0, ymm1":"=m"(res_share)::);  \
+	asm ("vmovdqa %0, ymm1":"=m"(res_share)::);  \
 
 #define _4S_AND2(p_share1, p_share2, res_share, i) \
 	/* Inputs refresh */ \
-	asm ("vmovdqu ymm14, %0"::"m"((((__m256*)R4)[i])):);  \
-	asm ("vmovdqu ymm10, %0"::"m"(p_share1):);  \
-	asm ("vmovdqu ymm13, %0"::"m"(p_share2):);  \
+	asm ("vmovdqa ymm14, %0"::"m"((((__m256*)R4)[i])):);  \
+	asm ("vmovdqa ymm10, %0"::"m"(p_share1):);  \
+	asm ("vmovdqa ymm13, %0"::"m"(p_share2):);  \
 	asm ("vxorpd ymm11, ymm11, ymm11":::);  \
 	asm ("vxorpd ymm10, ymm10, ymm14":::);  \
 	_ymm14_rotr() \
 	asm ("vxorpd ymm10, ymm10, ymm14":::);  \
-	asm ("vmovdqu ymm14, %0"::"m"((((__m256*)R4)[i+1])):);  \
+	asm ("vmovdqa ymm14, %0"::"m"((((__m256*)R4)[i+1])):);  \
 	/*body of AND gate*/   \
 	/* Do 4 times */  \
 	asm ("vandpd ymm12, ymm10, ymm13":::);  \
@@ -174,12 +174,12 @@ share_4 sst4;
 	asm ("vandpd ymm12, ymm10, ymm13":::);  \
 	asm ("vxorpd ymm11, ymm11, ymm12":::);  \
 	/* Write results */  \
-	asm ("vmovdqu %0, ymm11":"=m"(res_share)::);  \
+	asm ("vmovdqa %0, ymm11":"=m"(res_share)::);  \
 
 // rotate right share by i bits --> xmm0
 #define _4S_ROTR(p_share, i) \
-	asm volatile("vmovdqu ymm3, %0"::"m"(p_share):);  \
-	asm volatile("vmovdqu ymm4, ymm3":::);  \
+	asm volatile("vmovdqa ymm3, %0"::"m"(p_share):);  \
+	asm volatile("vmovdqa ymm4, ymm3":::);  \
 	asm volatile("vpsrlq ymm3, ymm3, %0"::"i"(i):);  \
 	asm volatile("vpsllq ymm4, ymm4, %0"::"i"(64-i):);  \
 	asm volatile("vorpd ymm3, ymm3, ymm4":::);  \
@@ -187,7 +187,7 @@ share_4 sst4;
 #define _4S_LDL1(p_share, rot1, rot2) \
 	/*_4S_ROTR(p_share, rot1)*/ \
 	/*_4S_ROTR(p_share, rot2)*/ \
-	asm ("vmovdqu ymm0, %0"::"m"(p_share):);  \
+	asm ("vmovdqa ymm0, %0"::"m"(p_share):);  \
 	asm ("vpsllq ymm1, ymm0, %0"::"i"(64-rot1):);  \
 	asm ("vpsllq ymm4, ymm0, %0"::"i"(64-rot2):);  \
 	asm ("vpsrlq ymm3, ymm0, %0"::"i"(rot2):);  \
@@ -196,12 +196,12 @@ share_4 sst4;
 	asm ("vorpd ymm3, ymm3, ymm4":::);  \
 	asm ("vxorpd ymm2, ymm0, ymm3":::);  \
 	asm ("vxorpd ymm2, ymm2, %0"::"m"(p_share):);  \
-	asm ("vmovdqu %0, ymm2":"=m"(p_share)::);  \
+	asm ("vmovdqa %0, ymm2":"=m"(p_share)::);  \
 
 #define _4S_LDL2(p_share, rot1, rot2) \
 	/*_4S_ROTR(p_share, rot1)*/ \
 	/*_4S_ROTR(p_share, rot2)*/ \
-	asm ("vmovdqu ymm5, %0"::"m"(p_share):);  \
+	asm ("vmovdqa ymm5, %0"::"m"(p_share):);  \
 	asm ("vpsllq ymm9, ymm5, %0"::"i"(64-rot2):);  \
 	asm ("vpsllq ymm6, ymm5, %0"::"i"(64-rot1):);  \
 	asm ("vpsrlq ymm8, ymm5, %0"::"i"(rot2):);  \
@@ -210,12 +210,12 @@ share_4 sst4;
 	asm ("vorpd ymm8, ymm8, ymm9":::);  \
 	asm ("vxorpd ymm7, ymm5, ymm8":::);  \
 	asm ("vxorpd ymm7, ymm7, %0"::"m"(p_share):);  \
-	asm ("vmovdqu %0, ymm7":"=m"(p_share)::);  \
+	asm ("vmovdqa %0, ymm7":"=m"(p_share)::);  \
 
 #define _4S_LDL3(p_share, rot1, rot2) \
 	/*_4S_ROTR(p_share, rot1)*/ \
 	/*_4S_ROTR(p_share, rot2)*/ \
-	asm ("vmovdqu ymm10, %0"::"m"(p_share):);  \
+	asm ("vmovdqa ymm10, %0"::"m"(p_share):);  \
 	asm ("vpsllq ymm14, ymm10, %0"::"i"(64-rot2):);  \
 	asm ("vpsllq ymm11, ymm10, %0"::"i"(64-rot1):);  \
 	asm ("vpsrlq ymm13, ymm10, %0"::"i"(rot2):);  \
@@ -224,20 +224,20 @@ share_4 sst4;
 	asm ("vorpd ymm13, ymm13, ymm14":::);  \
 	asm ("vxorpd ymm12, ymm10, ymm13":::);  \
 	asm ("vxorpd ymm12, ymm12, %0"::"m"(p_share):);  \
-	asm ("vmovdqu %0, ymm12":"=m"(p_share)::);  \
+	asm ("vmovdqa %0, ymm12":"=m"(p_share)::);  \
 
 #define _4S_ROUND(c) \
 	randbuf.GetBytes((uint8_t*)R4, sizeof(R4)); \
 	/*load state*/ \
 	D[3] = c;\
-	asm volatile("vmovdqu ymm11, %0"::"m"((((__m256*)D)[0])):);  \
-	asm volatile("vmovdqu ymm0, %0"::"m"(ssx0):);  \
-	asm volatile("vmovdqu ymm4, %0"::"m"(ssx4):);  \
-	asm volatile("vmovdqu ymm2, %0"::"m"(ssx2):);  \
-	asm volatile("vmovdqu ymm3, %0"::"m"(ssx3):);  \
-	asm volatile("vmovdqu ymm1, %0"::"m"(ssx1):);  \
+	asm volatile("vmovdqa ymm11, %0"::"m"((((__m256*)D)[0])):);  \
+	asm volatile("vmovdqa ymm0, %0"::"m"(ssx0):);  \
+	asm volatile("vmovdqa ymm4, %0"::"m"(ssx4):);  \
+	asm volatile("vmovdqa ymm2, %0"::"m"(ssx2):);  \
+	asm volatile("vmovdqa ymm3, %0"::"m"(ssx3):);  \
+	asm volatile("vmovdqa ymm1, %0"::"m"(ssx1):);  \
 	D[3] = C_not;  \
-	asm volatile("vmovdqu ymm5, %0"::"m"((((__m256*)D)[0])):);  \
+	asm volatile("vmovdqa ymm5, %0"::"m"((((__m256*)D)[0])):);  \
 	asm volatile("vxorpd ymm2, ymm2, ymm11":::);  /*XOR(ssx2, c)*/  \
 	asm volatile("vxorpd ymm0, ymm4, ymm0":::);  /*XOR(ssx0, ssx4)*/  \
 	asm volatile("vxorpd ymm4, ymm4, ymm3":::);  /*XOR(ssx4, ssx3)*/  \
@@ -248,14 +248,14 @@ share_4 sst4;
 	asm volatile("vxorpd ymm14, ymm4, ymm5":::);  /*sst4 = NOT(ssx4)*/  \
 	asm volatile("vxorpd ymm12, ymm2, ymm5":::);  /*sst2 = NOT(ssx2)*/ \
 	/* write back state*/ \
-	asm volatile("vmovdqu %0, ymm0":"=m"(ssx0)::);  \
-	asm volatile("vmovdqu %0, ymm2":"=m"(ssx2)::);  \
-	asm volatile("vmovdqu %0, ymm4":"=m"(ssx4)::);  \
-	asm volatile("vmovdqu %0, ymm10":"=m"(sst0)::);  \
-	asm volatile("vmovdqu %0, ymm11":"=m"(sst1)::);  \
-	asm volatile("vmovdqu %0, ymm12":"=m"(sst2)::);  \
-	asm volatile("vmovdqu %0, ymm13":"=m"(sst3)::);  \
-	asm volatile("vmovdqu %0, ymm14":"=m"(sst4)::);  \
+	asm volatile("vmovdqa %0, ymm0":"=m"(ssx0)::);  \
+	asm volatile("vmovdqa %0, ymm2":"=m"(ssx2)::);  \
+	asm volatile("vmovdqa %0, ymm4":"=m"(ssx4)::);  \
+	asm volatile("vmovdqa %0, ymm10":"=m"(sst0)::);  \
+	asm volatile("vmovdqa %0, ymm11":"=m"(sst1)::);  \
+	asm volatile("vmovdqa %0, ymm12":"=m"(sst2)::);  \
+	asm volatile("vmovdqa %0, ymm13":"=m"(sst3)::);  \
+	asm volatile("vmovdqa %0, ymm14":"=m"(sst4)::);  \
 	/*LOAD Random*/\
 	_4S_AND1(sst0, ssx1, sst0 ,0) \
 	_4S_AND2(sst1, ssx2, sst1, 2) \
@@ -263,17 +263,17 @@ share_4 sst4;
 	_4S_AND2(sst3, ssx4, sst3, 6) \
 	_4S_AND1(sst4, ssx0, sst4, 8) \
 	/*load state*/ \
-	asm volatile("vmovdqu ymm0, %0"::"m"(ssx0):);  \
-	asm volatile("vmovdqu ymm11, %0"::"m"(sst1):);  \
-	asm volatile("vmovdqu ymm1, %0"::"m"(ssx1):);  \
-	asm volatile("vmovdqu ymm12, %0"::"m"(sst2):);  \
-	asm volatile("vmovdqu ymm2, %0"::"m"(ssx2):);  \
-	asm volatile("vmovdqu ymm13, %0"::"m"(sst3):);  \
-	asm volatile("vmovdqu ymm3, %0"::"m"(ssx3):);  \
-	asm volatile("vmovdqu ymm14, %0"::"m"(sst4):);  \
-	asm volatile("vmovdqu ymm4, %0"::"m"(ssx4):);  \
-	asm volatile("vmovdqu ymm10, %0"::"m"(sst0):);  \
-	asm volatile("vmovdqu ymm5, %0"::"m"((((__m256*)D)[0])):);  \
+	asm volatile("vmovdqa ymm0, %0"::"m"(ssx0):);  \
+	asm volatile("vmovdqa ymm11, %0"::"m"(sst1):);  \
+	asm volatile("vmovdqa ymm1, %0"::"m"(ssx1):);  \
+	asm volatile("vmovdqa ymm12, %0"::"m"(sst2):);  \
+	asm volatile("vmovdqa ymm2, %0"::"m"(ssx2):);  \
+	asm volatile("vmovdqa ymm13, %0"::"m"(sst3):);  \
+	asm volatile("vmovdqa ymm3, %0"::"m"(ssx3):);  \
+	asm volatile("vmovdqa ymm14, %0"::"m"(sst4):);  \
+	asm volatile("vmovdqa ymm4, %0"::"m"(ssx4):);  \
+	asm volatile("vmovdqa ymm10, %0"::"m"(sst0):);  \
+	asm volatile("vmovdqa ymm5, %0"::"m"((((__m256*)D)[0])):);  \
 	asm volatile("vxorpd ymm0, ymm0, ymm11":::);  /*XOR(ssx0, sst1)*/  \
 	asm volatile("vxorpd ymm1, ymm1, ymm12":::);  /*XOR(ssx1, sst2)*/  \
 	asm volatile("vxorpd ymm2, ymm2, ymm13":::);  /*XOR(ssx2, sst3)*/  \
@@ -284,11 +284,11 @@ share_4 sst4;
 	asm volatile("vxorpd ymm3, ymm3, ymm2":::);  /*XOR(ssx3, ssx2)*/  \
 	asm volatile("vxorpd ymm2, ymm2, ymm5":::);  /*NOT(ssx2)*/  \
 	/*write back state*/ \
-	asm volatile("vmovdqu %0, ymm4":"=m"(ssx4)::);  \
-	asm volatile("vmovdqu %0, ymm0":"=m"(ssx0)::);  \
-	asm volatile("vmovdqu %0, ymm1":"=m"(ssx1)::);  \
-	asm volatile("vmovdqu %0, ymm3":"=m"(ssx3)::);  \
-	asm volatile("vmovdqu %0, ymm2":"=m"(ssx2)::);  \
+	asm volatile("vmovdqa %0, ymm4":"=m"(ssx4)::);  \
+	asm volatile("vmovdqa %0, ymm0":"=m"(ssx0)::);  \
+	asm volatile("vmovdqa %0, ymm1":"=m"(ssx1)::);  \
+	asm volatile("vmovdqa %0, ymm3":"=m"(ssx3)::);  \
+	asm volatile("vmovdqa %0, ymm2":"=m"(ssx2)::);  \
 	_4S_LDL1(ssx0, 19, 28) \
 	_4S_LDL2(ssx1, 39, 61) \
 	_4S_LDL3(ssx2, 1, 6) \
