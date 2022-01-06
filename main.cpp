@@ -10,6 +10,9 @@
 	#include "sse2_mask/2mask_ascon-p.h"
 	#include "avx2_mask/4mask_ascon-p.h"
 #endif
+#if defined(__AVX512F__)
+# include "avx512_mask/opt_8mask_ascon-p.h"
+#endif
 #include "d_mask/dmask_ascon-p.h"
 #include "isapa128av20/opt_64/isap.h"
 #include "consts.h"
@@ -57,23 +60,22 @@ uint64_t getCycles() {
     //#endif
 }
 
-unsigned long getInstruction() {
+unsigned long inline getInstructionPointer() {
+	unsigned long addr;
 	#if defined(__i386__)
-		uint32_t addr;
-		asm volatile ("mov %0, [ebp+4]":"=a"(addr)::);
+		asm volatile ("call 1f\n1:    pop %0":"=a"(addr)::);
 		return addr;
 	#endif
 	#if defined(__x86_64__)
-		uint64_t addr;
 		asm volatile ("lea %0, [rip]":"=a"(addr)::);
 		return addr;
 	#endif
 }
 
 #define BENCH_CODESZ(func, offset) \
-	eip = getInstruction(); \
+	eip = getInstructionPointer(); \
 	func; \
-	eip = getInstruction()-eip; \
+	eip = getInstructionPointer()-eip; \
 	printf("\ncode-size: %u", eip); \
 
 // defining variables
@@ -81,8 +83,6 @@ INIT;
 
 int main(int argc, char* argv[])
 {
-	#if defined(__x86_64__)
-	#endif
 	size_t count;
 	int slim = 0;
 	if (argc>=2 && argv[1][0]=='1')
@@ -120,7 +120,7 @@ int main(int argc, char* argv[])
 		printf(">>>> 0\n");
 		randbuf.LoadMax();
 		printf("my xmm masking(d=2)");
-		BENCH_CODESZ(_2S_P12, 0);
+		//BENCH_CODESZ(_2S_P12, 0);
 		for (size_t i = 0; i < 5; i++)
 		{
 			x[i] = i;
@@ -150,10 +150,28 @@ int main(int argc, char* argv[])
 		printf(CpB, (double)(getCycles()- before) / count / BITS);
 		Get4Shares();
 		printf(">>>> %u\n", randbuf.GetSz()-randbuf.GetRdy());
+		#if defined(__AVX512F__)
+		randbuf.LoadMax();
+		printf("my zmm masking(d=8)");
+		//BENCH_CODESZ(_8S_P12, 0);
+		for (size_t i = 0; i < 5; i++)
+		{
+			x[i] = i;
+		}
+		Init8Shares(x, rand);
+		before = getCycles();
+		for (size_t i = 0; i < count; i++)
+		{
+			_8S_P12;
+		}
+		printf(CpB, (double)(getCycles()- before) / count / BITS);
+		Get8Shares();
+		printf(">>>> %u\n", randbuf.GetSz()-randbuf.GetRdy());
+		#endif
 	}
 	randbuf.LoadMax();
 	printf("C generic masking(d=%d)", MASKING_ORDER);
-	printf("\ncode-size: 0");
+	BENCH_CODESZ(dS_P12, 0);
 	for (size_t i = 0; i < 5; i++)
 	{
 		x[i] = i;
