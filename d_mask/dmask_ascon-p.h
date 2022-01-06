@@ -2,12 +2,24 @@
 #include<stdio.h>
 #include<cstdint>
 #include "../consts.h"
+#include <cstring>
+
+#define CEILING(x,y) (((x) + (y) - 1) / (y))
+
+#if defined(UMA_AND)
+#define AND_RAND_COUNT (MASKING_ORDER)*CEILING(MASKING_ORDER-1, 4)
+#define AND dS_UMA_AND
+#else
+#define AND_RAND_COUNT (MASKING_ORDER)*(MASKING_ORDER-1) / 2
+#define AND dS_AND
+#endif
 
 typedef struct dshare_t
 {
 	uint64_t s[MASKING_ORDER];
 } dshare;
 #include "dmask_AND_gate.h"
+
 
 // state words x0..x4 (uint64), temporary variables t0..t4 (uint64)
 // 0
@@ -47,6 +59,7 @@ typedef struct dshare_t
 
 dshare d_share_x[5];
 dshare d_share_t[5];
+uint64_t Rd[5*AND_RAND_COUNT];
 
 #define uint64_rotr(x,n) (((x)>>(n))|((x)<<(64-(n))))
 
@@ -69,23 +82,158 @@ static uint64_t dS_GET(dshare* p_share) {
 	return tmp;
 }
 
+inline dshare operator>>(dshare &share, int rot) {
+	dshare ans;
+	for (size_t i = 0; i<MASKING_ORDER; ++i) {
+		ans.s[(i+rot)%MASKING_ORDER] = share.s[i];
+	}
+	return ans;
+}
+inline dshare& operator^=(dshare &self, dshare &other) {
+	for (size_t i=0;i<MASKING_ORDER;++i) {
+		self.s[i] ^= other.s[i];
+	}
+	return self;
+}
+
+inline dshare operator&(dshare &p1, dshare &p2) {
+	dshare res;
+	for (size_t i=0;i<MASKING_ORDER;++i) {
+		res.s[i] = p1.s[i] & p2.s[i];
+	}
+	return res;
+}
+
+inline dshare dS_UMA_AND(dshare a, dshare b, size_t randindex) {
+	#ifdef REFRESH
+	refresh(&a, &b, &randbuf);
+	#endif // REFRESH
+	dshare ans;
+	dshare tmp;
+	dshare tmp2;
+	dshare ri;
+	ans = a & b;
+	// matrix mult. with minimal randomness...
+	for (size_t i = 0; i<(MASKING_ORDER-1)>>2; ++i) {
+		// load r_i
+		for (size_t j=0;j<MASKING_ORDER;j++) {
+			ri.s[j] = Rd[randindex++];
+		}
+		// XORing
+		ans ^= ri;
+		// ROR ri
+		ri = ri>>1;
+		tmp2 = b>>(1+2*i);
+		tmp = a & tmp2;
+		ans ^= tmp;
+		tmp2 = a>>(1+2*i);
+		tmp = tmp2 & b;
+		ans ^= tmp;
+		ans ^= ri;
+		tmp2 = b>>(2+2*i);
+		tmp = a & tmp2;
+		ans ^= tmp;
+		tmp2 = a>>(2+2*i);
+		tmp = tmp2 & b;
+		ans ^= tmp;
+	}
+	int l = (MASKING_ORDER-1)>>2;
+	if ((MASKING_ORDER-1) % 4 == 3) {
+		// load r_i
+		for (size_t j=0;j<MASKING_ORDER;j++) {
+			ri.s[j] = Rd[randindex++];
+		}
+		ans ^= ri;
+		ri = ri>>1;
+		tmp2 = b>>(1+2*l);
+		tmp = a & tmp2;
+		ans ^= tmp;
+		tmp2 = a>>(1+2*l);
+		tmp = tmp2 & b;
+		ans ^= tmp;
+		ans ^= ri;
+		tmp2 = b>>(2+2*l);
+		tmp = a & tmp2;
+		ans ^= tmp;
+	}
+	else if ((MASKING_ORDER-1) % 4 == 3) {
+		if (MASKING_ORDER == 3) {
+			//load r_i
+			ri.s[0] = Rd[randindex++];
+			ri.s[1] = Rd[randindex++];
+			ri.s[2] = ri.s[0] ^ ri.s[1];
+			ans ^= ri;
+			tmp2 = b>>(1+2*l);
+			tmp = a & tmp2;
+			ans ^= tmp;
+			tmp2 = a>>(1+2*l);
+			tmp = tmp2 & b;
+			ans ^= tmp;
+		}
+		else {
+			// load r_i
+			for (size_t j=0;j<MASKING_ORDER;j++) {
+				ri.s[j] = Rd[randindex++];
+			}
+		}
+		ans ^= ri;
+		tmp2 = b>>(1+2*l);
+		tmp = a & tmp2;
+		ans ^= tmp;
+		ri = ri >> 1;
+		tmp2 = b>>(2+2*l);
+		tmp = a & tmp2;
+		ans ^= tmp;
+	}
+	else if ((MASKING_ORDER-1)%4==1) {
+		// load r_i
+		for (size_t j=0;j<MASKING_ORDER/2;j++) {
+			ri.s[j] = Rd[randindex++];
+		}
+		for (size_t j=MASKING_ORDER/2;j<MASKING_ORDER;j++) {
+			ri.s[j] = ri.s[j-MASKING_ORDER/2];
+		}
+		ans ^= ri;
+		tmp2 = b>>(1+2*l);
+		tmp = a & tmp2;
+		ans ^= tmp;
+	}
+	return ans;
+}
+
 // general dS_AND with refresh
-inline dshare dS_AND(dshare* p1, dshare* p2) {
+inline dshare dS_AND(dshare &p1, dshare &p2, size_t randindex) {
 	#ifdef REFRESH
 	refresh(p1, p2, &randbuf);
 	#endif // REFRESH
-	uint64_t tmp;
 	dshare ans;
 	// matrix mult. with minimal randomness...
-	#if defined(OPTIMIZE_SSE2)
+	#if !defined(OPTIMIZE_SSE2)
+	// no SIMD optimizations...
+	for (size_t i = 0; i < MASKING_ORDER; i++) {
+		ans.s[i] = 0;
+	}
+	for (size_t i = 0; i < MASKING_ORDER; i++)
+	{
+		ans.s[i] ^= p1.s[i] & p2.s[i];
+		for (size_t j = i+1; j < MASKING_ORDER; j++)
+		{
+			ans.s[i] ^= Rd[randindex];
+			ans.s[i] ^= p1.s[i] & p2.s[j];
+			ans.s[j] ^= Rd[randindex];
+			ans.s[j] ^= p1.s[j] & p2.s[i];
+			randindex++;
+		}
+	}
+	#else
 	for (size_t i = 0; i < MASKING_ORDER; i++) {
 		asm("vxorpd xmm0, xmm0, xmm0");
 		asm("vmovq %0, xmm0":"=m"(ans.s[i])::);
 	}
 	for (size_t i = 0; i < MASKING_ORDER; i++)
 	{
-		asm("vmovq xmm0, %0"::"m"(p1->s[i]):);
-		asm("vmovq xmm1, %0"::"m"(p2->s[i]):);
+		asm("vmovq xmm0, %0"::"m"(p1.s[i]):);
+		asm("vmovq xmm1, %0"::"m"(p2.s[i]):);
 		asm("andpd xmm0, xmm1");
 		asm("vmovq xmm1, %0"::"m"(ans.s[i]):);
 		asm("xorpd xmm0, xmm1");
@@ -98,8 +246,8 @@ inline dshare dS_AND(dshare* p1, dshare* p2) {
 			asm("xorpd xmm0, xmm1");
 			asm("vmovq %0, xmm0":"=m"(ans.s[i])::);
 
-			asm("vmovq xmm0, %0"::"m"(p1->s[i]):);
-			asm("vmovq xmm1, %0"::"m"(p2->s[j]):);
+			asm("vmovq xmm0, %0"::"m"(p1.s[i]):);
+			asm("vmovq xmm1, %0"::"m"(p2.s[j]):);
 			asm("andpd xmm0, xmm1");
 			asm("vmovq xmm1, %0"::"m"(ans.s[i]):);
 			asm("xorpd xmm0, xmm1");
@@ -110,29 +258,12 @@ inline dshare dS_AND(dshare* p1, dshare* p2) {
 			asm("xorpd xmm0, xmm1");
 			asm("vmovq %0, xmm0":"=m"(ans.s[j])::);
 			
-			asm("vmovq xmm0, %0"::"m"(p1->s[j]):);
-			asm("vmovq xmm1, %0"::"m"(p2->s[i]):);
+			asm("vmovq xmm0, %0"::"m"(p1.s[j]):);
+			asm("vmovq xmm1, %0"::"m"(p2.s[i]):);
 			asm("andpd xmm0, xmm1");
 			asm("vmovq xmm1, %0"::"m"(ans.s[j]):);
 			asm("xorpd xmm0, xmm1");
 			asm("vmovq %0, xmm0":"=m"(ans.s[j])::);
-		}
-	}
-	#else
-	// no SIMD optimizations...
-	for (size_t i = 0; i < MASKING_ORDER; i++) {
-		ans.s[i] = 0;
-	}
-	for (size_t i = 0; i < MASKING_ORDER; i++)
-	{
-		ans.s[i] ^= p1->s[i] & p2->s[i];
-		for (size_t j = i+1; j < MASKING_ORDER; j++)
-		{
-			tmp = randbuf.GetQWORD();
-			ans.s[i] ^= tmp;
-			ans.s[i] ^= p1->s[i] & p2->s[j];
-			ans.s[j] ^= tmp;
-			ans.s[j] ^= p1->s[j] & p2->s[i];
 		}
 	}
 	#endif
@@ -147,6 +278,7 @@ inline dshare dS_AND(dshare* p1, dshare* p2) {
 		x[j].s[i] = t[j].s[i] ^ rot[j].s[i]; \
 
 inline void dS_ROUND(int C) {
+	randbuf.GetBytes((uint8_t*)Rd, sizeof(Rd));
 	dshare* x = d_share_x;
 	dshare* t = d_share_t;
 	dshare rot[5];
@@ -159,34 +291,32 @@ inline void dS_ROUND(int C) {
 		x[2].s[i] ^= x[1].s[i];
 	}
 	//t0 = ~x0;    t1 = ~x1;    t2 = ~x2;    t3 = ~x3;    t4 = ~x4;
-	t[0].s[0] = x[0].s[0] ^ C_not;
-	t[1].s[0] = x[1].s[0] ^ C_not;
-	t[2].s[0] = x[2].s[0] ^ C_not;
-	t[3].s[0] = x[3].s[0] ^ C_not;
-	t[4].s[0] = x[4].s[0] ^ C_not;
-	for (int j = 1; j < MASKING_ORDER; j++)
+	t[0].s[0] = ~x[0].s[0];
+	t[1].s[0] = ~x[1].s[0];
+	t[2].s[0] = ~x[2].s[0];
+	t[3].s[0] = ~x[3].s[0];
+	t[4].s[0] = ~x[4].s[0];
+	for (int i = 1; i < MASKING_ORDER; i++)
 	{
-		t[0].s[j] = x[0].s[j];
-		t[1].s[j] = x[1].s[j];
-		t[2].s[j] = x[2].s[j];
-		t[3].s[j] = x[3].s[j];
-		t[4].s[j] = x[4].s[j];
+		t[0].s[i] = x[0].s[i];
+		t[1].s[i] = x[1].s[i];
+		t[2].s[i] = x[2].s[i];
+		t[3].s[i] = x[3].s[i];
+		t[4].s[i] = x[4].s[i];
 	}
-		
 	//t0 &= x1;    t1 &= x2;    t2 &= x3;    t3 &= x4;    t4 &= x0;
-	int tmp;
-	for (int i = 0; i < 5; i++)
-	{
-		tmp = ((i + 1) % 5);
-		t[i] = dS_AND(t + i, x + tmp);
-	}
+	t[0] = AND(t[0], x[1], 0);
+	t[1] = AND(t[1], x[2], AND_RAND_COUNT);
+	t[2] = AND(t[2], x[3], AND_RAND_COUNT*2);
+	t[3] = AND(t[3], x[4], AND_RAND_COUNT*3);
+	t[4] = AND(t[4], x[0], AND_RAND_COUNT*4);
 	//x0 ^= t1;    x1 ^= t2;    x2 ^= t3;    x3 ^= t4;    x4 ^= t0;
-	for (int i = 0; i < 5; i++)
-	{
-		tmp = ((i + 1) % 5);
-		for (size_t j = 0; j<MASKING_ORDER; j++) {
-			x[i].s[j] ^= t[tmp].s[j];
-		}
+	for (size_t i = 0; i<MASKING_ORDER; i++) {
+		x[0].s[i] ^= t[1].s[i];
+		x[1].s[i] ^= t[2].s[i];
+		x[2].s[i] ^= t[3].s[i];
+		x[3].s[i] ^= t[4].s[i];
+		x[4].s[i] ^= t[0].s[i];
 	}
 	//x1 ^= x0;    x0 ^= x4;    x3 ^= x2;    x2 = ~x2;
 	for (size_t i=0; i<MASKING_ORDER; i++) {
@@ -194,9 +324,9 @@ inline void dS_ROUND(int C) {
 		x[0].s[i] ^= x[4].s[i];
 		x[3].s[i] ^= x[2].s[i];
 	}
-	x[2].s[0] ^= C_not;
+	x[2].s[0] = ~x[2].s[0];
 	// linear layer
-	for (int i = 0; i < MASKING_ORDER; i++) {
+	for (size_t i = 0; i < MASKING_ORDER; i++) {
 		dS_LDL(i, 0, 19, 28);
 		dS_LDL(i, 1, 39, 61);
 		dS_LDL(i, 2, 1, 6);
