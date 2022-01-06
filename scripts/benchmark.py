@@ -29,7 +29,8 @@ class Design(object):
 		return f":{self.name=}\n:{self.code_size=}\n:{self.cycles_per_bit=}\n:{self.randomness_used=}\n:{self.masking_order=}:"
 
 		
-
+cwd = os.getcwd()
+linuxwd = "/mnt/"+cwd.replace('\\', '/').replace("C:", "c")
 parser = argparse.ArgumentParser(description='Bench test the performance of various implementations of ISAP permutation block.')
 parser.add_argument('--arch', choices=['32', '64', 'armv7', 'aarch64'], type=str, default=['64'], nargs=1, help='compile for 32/64 bit; compile for armv7/aarch64;')
 parser.add_argument('--maskrange', type=int, default=None, nargs=2, metavar='N', help='masking order range')
@@ -42,23 +43,24 @@ verbose = nmsp['v']
 design_list = []
 per_d = dict()
 y1, y2 = [[], []]
+r1, r2 =[[], []]
 
 if drange:
     for d in range(drange[0], drange[1]+1):
-        with open("A:\\home\\dor\\ascon-p\\consts.h", "r") as f:
+        with open(cwd+"\\consts.h", "r") as f:
             s = f.read().split('\n')
         s[0] = f"#define MASKING_ORDER {d}"
         s = '\n'.join(s)
-        with open("consts.h", "w") as f:
+        with open(cwd+"\\consts.h", "w") as f:
             f.write(s)
         if p in ['32', '64']:
-            os.system(f"wsl g++ -m{p} -O3 -fno-builtin -masm=intel ascon-p/main.cpp ascon-p/RandomBuffer/*.cpp ascon-p/usuba_mask/masked_ascon_ua_vslice.c -o ascon-p/release/main_{p}.o")
+            os.system(f"wsl g++ -m{p} -O3 -fno-builtin -masm=intel {linuxwd}/main.cpp {linuxwd}/RandomBuffer/*.cpp {linuxwd}/usuba_mask/masked_ascon_ua_vslice.c -o {linuxwd}/release/main_{p}.o")
         elif p=='aarch64':
-            os.system(f"wsl aarch64-linux-gnu-g++ -fno-builtin -O3 -static -Wformat=0 ./ascon-p/arm_main.cpp ./ascon-p/RandomBuffer/*.cpp ./ascon-p/usuba_mask/masked_ascon_ua_vslice.c -o ./ascon-p/release/main_{p}.o")
+            os.system(f"wsl aarch64-linux-gnu-g++ -fno-builtin -O3 -static -Wformat=0 {linuxwd}/arm_main.cpp {linuxwd}/RandomBuffer/*.cpp {linuxwd}/usuba_mask/masked_ascon_ua_vslice.c -o {linuxwd}/release/main_{p}.o")
         elif p=='armv7':
-            os.system(f"wsl arm-linux-gnueabihf-g++ -fno-builtin -O3 -static -Wformat=0 ./ascon-p/arm_main.cpp ./ascon-p/RandomBuffer/*.cpp ./ascon-p/usuba_mask/masked_ascon_ua_vslice.c -o ./ascon-p/release/main_{p}.o")
+            os.system(f"wsl arm-linux-gnueabihf-g++ -fno-builtin -O3 -static -Wformat=0 {linuxwd}/arm_main.cpp {linuxwd}/RandomBuffer/*.cpp {linuxwd}/usuba_mask/masked_ascon_ua_vslice.c -o {linuxwd}/release/main_{p}.o")
 
-        c_output = subprocess.run(["wsl", f"./ascon-p/release/main_{p}.o", "0", f"{int(INIT_COUNT/d)}"], capture_output=True)
+        c_output = subprocess.run(["wsl", f"{linuxwd}/release/main_{p}.o", "0", f"{int(INIT_COUNT/d)}"], capture_output=True)
         stdout = c_output.stdout.decode().split('\n')
         i = find_design_by_name(stdout, "C generic masking")
         design_list.append(Design(
@@ -79,6 +81,8 @@ if drange:
         per_d[d] =  design_list
         y1.append(design_list[0].cycles_per_bit)
         y2.append(design_list[1].cycles_per_bit)
+        r1.append(design_list[0].randomness_used)
+        r2.append(design_list[1].randomness_used)
         design_list = []
     if verbose:
         print(per_d)
@@ -87,17 +91,22 @@ if drange:
     print(f"{x=}")
     print(f"{y1=}")
     print(f"{y2=}")
+    plt.subplot(2,1,1)
+    plt.title(f"Cycles per bit {p}")
     plt.plot(x, y1, x, y2)
+    plt.subplot(2,1,2)
+    plt.title(f"Randomness used {p}")
+    plt.plot(x, r1, x, r2)
     plt.show()
-    savemat(f".\\results\\benchmark_{p}.mat", {"d": x, "gc": y1, "uc": y2})
+    savemat(f"{cwd}\\results\\benchmark_{p}.mat", {"d": x, "gc": y1, "uc": y2, "gr": r1, "ur": r2})
 else:
     if p in ['32', '64']:
-        os.system(f"wsl g++ -m{p} -O3 -fno-builtin -masm=intel ascon-p/main.cpp ascon-p/RandomBuffer/*.cpp ascon-p/usuba_mask/masked_ascon_ua_vslice.c -o ascon-p/release/main_{p}.o")
+        os.system(f"wsl g++ -m{p} -O3 -fno-builtin -masm=intel {linuxwd}/main.cpp {linuxwd}/RandomBuffer/*.cpp {linuxwd}/usuba_mask/masked_ascon_ua_vslice.c -o {linuxwd}/release/main_{p}.o")
     elif p=='aarch64':
-        os.system(f"wsl aarch64-linux-gnu-g++ -fno-builtin -O3 -static -Wformat=0 ./ascon-p/arm_main.cpp ./ascon-p/RandomBuffer/*.cpp ./ascon-p/usuba_mask/masked_ascon_ua_vslice.c -o ./ascon-p/release/main_{p}.o")
+        os.system(f"wsl aarch64-linux-gnu-g++ -fno-builtin -O3 -static -Wformat=0 {linuxwd}/arm_main.cpp {linuxwd}/RandomBuffer/*.cpp {linuxwd}/usuba_mask/masked_ascon_ua_vslice.c -o {linuxwd}/release/main_{p}.o")
     elif p=='armv7':
-        os.system(f"wsl arm-linux-gnueabihf-g++ -fno-builtin -O3 -static -Wformat=0 ./ascon-p/arm_main.cpp ./ascon-p/RandomBuffer/*.cpp ./ascon-p/usuba_mask/masked_ascon_ua_vslice.c -o ./ascon-p/release/main_{p}.o")
-    c_output = subprocess.run(["wsl", f"./ascon-p/release/main{p}.o"], capture_output=True)
+        os.system(f"wsl arm-linux-gnueabihf-g++ -fno-builtin -O3 -static -Wformat=0 {linuxwd}/arm_main.cpp {linuxwd}/RandomBuffer/*.cpp {linuxwd}/usuba_mask/masked_ascon_ua_vslice.c -o {linuxwd}/release/main_{p}.o")
+    c_output = subprocess.run(["wsl", f"{linuxwd}/release/main{p}.o"], capture_output=True)
     stdout = c_output.stdout.decode().split('\n')
     i = 0
     d = 1

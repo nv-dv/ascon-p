@@ -6,8 +6,10 @@ import argparse
 import subprocess
 import os
 
+cwd = os.getcwd()
+linuxwd = "/mnt/"+cwd.replace('\\', '/').replace("C:", "c")
 usuba_funcs = {"isw_mult":0, "Sbox__V64":0, "AddConstant__V64":0, "LinearLayer__V64":0, "ascon12":0}
-gen_funcs = {"dS_AND":0, "dS_ROUND":0 }
+gen_funcs = {"dS_AND":0, "dS_UMA_AND":0, "dS_ROUND":0 }
 
 parser = argparse.ArgumentParser(description='Codesize of various implementations of ISAP permutation block.')
 parser.add_argument('--arch', choices=['32', '64', 'armv7', 'aarch64'], default=['64'], nargs=1, help='compile for 32/64 bit; compile for armv7/aarch64;')
@@ -20,25 +22,25 @@ drange = nmsp['maskrange']
 verbose = nmsp['v']
 
 if verbose:
-    print(f"{p} bit...")
+    print(f"{p} arch...")
 
 y1, y2 = [[], []]
 
 for d in range(drange[0], drange[1]+1):
-    with open("consts.h", "r") as f:
+    with open(cwd+"\\consts.h", "r") as f:
         s = f.read().split('\n')
     s[0] = f"#define MASKING_ORDER {d}"
     s = '\n'.join(s)
-    with open("consts.h", "w") as f:
+    with open(cwd+"\\consts.h", "w") as f:
         f.write(s)
     if p in ['32', '64']:
-        os.system(f"wsl g++ -m{p} -O3 -fno-builtin -masm=intel ascon-p/main.cpp ascon-p/RandomBuffer/*.cpp ascon-p/usuba_mask/masked_ascon_ua_vslice.c -o ascon-p/release/main_{p}.o")
+        os.system(f"wsl g++ -m{p} -O3 -fno-builtin -masm=intel {linuxwd}/main.cpp {linuxwd}/RandomBuffer/*.cpp {linuxwd}/usuba_mask/masked_ascon_ua_vslice.c -o {linuxwd}/release/main_{p}.o")
     elif p=='aarch64':
-        os.system(f"wsl aarch64-linux-gnu-g++ -fno-builtin -O3 -static -Wformat=0 ./ascon-p/arm_main.cpp ./ascon-p/RandomBuffer/*.cpp ./ascon-p/usuba_mask/masked_ascon_ua_vslice.c -o ./ascon-p/release/main_{p}.o")
+        os.system(f"wsl aarch64-linux-gnu-g++ -fno-builtin -O3 -static -Wformat=0 {linuxwd}/arm_main.cpp {linuxwd}/RandomBuffer/*.cpp {linuxwd}/usuba_mask/masked_ascon_ua_vslice.c -o {linuxwd}/release/main_{p}.o")
     elif p=='armv7':
-        os.system(f"wsl arm-linux-gnueabihf-g++ -fno-builtin -O3 -static -Wformat=0 ./ascon-p/arm_main.cpp ./ascon-p/RandomBuffer/*.cpp ./ascon-p/usuba_mask/masked_ascon_ua_vslice.c -o ./ascon-p/release/main_{p}.o")
+        os.system(f"wsl arm-linux-gnueabihf-g++ -fno-builtin -O3 -static -Wformat=0 {linuxwd}/arm_main.cpp {linuxwd}/RandomBuffer/*.cpp {linuxwd}/usuba_mask/masked_ascon_ua_vslice.c -o {linuxwd}/release/main_{p}.o")
 
-    c_output = subprocess.run(["wsl", "nm", "-S", f"./ascon-p/release/main_{p}.o"], capture_output=True)
+    c_output = subprocess.run(["wsl", "nm", "-S", f"{linuxwd}/release/main_{p}.o"], capture_output=True)
     stdout = c_output.stdout.decode().split('\n')
     for line in stdout:
         func = line.split(" ")[-1]
@@ -57,7 +59,7 @@ for d in range(drange[0], drange[1]+1):
     if p in ['32', '64']:
         usuba_funcs["LinearLayer__V64"] = 0
     #         or 74 or 100
-    y1.append(130+12*(gen_funcs["dS_ROUND"]+5*gen_funcs["dS_AND"]))
+    y1.append(130+12*(gen_funcs["dS_ROUND"]+5*gen_funcs["dS_AND"]+5*gen_funcs["dS_UMA_AND"]))
     if verbose:
         print(f"generic C codesize(d={d}): ", y1[-1])
     # y2.append(usuba_funcs["ascon12"]+12*(usuba_funcs["AddConstant__V64"]+usuba_funcs["Sbox__V64"]+usuba_funcs["LinearLayer__V64"]+5*usuba_funcs["isw_mult"]))
@@ -70,6 +72,7 @@ print("---->")
 print(f"{x=}")
 print(f"{y1=}")
 print(f"{y2=}")
+plt.title(f"Codesize - {p}")
 plt.plot(x, y1, x, y2)
 plt.show()
-savemat(f".\\results\\codesize_{p}.mat", {"d": x, "gc": y1, "uc": y2})
+savemat(f"{cwd}\\results\\codesize_{p}.mat", {"d": x, "gc": y1, "uc": y2})
