@@ -20,6 +20,7 @@ nmsp = vars(parser.parse_args())
 p = nmsp['arch'][0]
 drange = nmsp['maskrange']
 verbose = nmsp['v']
+uma_str = ""
 
 if verbose:
     print(f"{p} arch...")
@@ -29,12 +30,14 @@ y1, y2 = [[], []]
 for d in range(drange[0], drange[1]+1):
     with open(cwd+"\\consts.h", "r") as f:
         s = f.read().split('\n')
+        if "#define UMA_AND" in s:
+            uma_str = "_UMA"
     s[0] = f"#define MASKING_ORDER {d}"
     s = '\n'.join(s)
     with open(cwd+"\\consts.h", "w") as f:
         f.write(s)
     if p in ['32', '64']:
-        os.system(f"wsl g++ -m{p} -O3 -fno-builtin -masm=intel {linuxwd}/main.cpp {linuxwd}/RandomBuffer/*.cpp {linuxwd}/usuba_mask/masked_ascon_ua_vslice.c -o {linuxwd}/release/main_{p}.o")
+        os.system(f"wsl g++ -m{p} -O3 -mavx2 -fno-builtin -masm=intel {linuxwd}/main.cpp {linuxwd}/RandomBuffer/*.cpp {linuxwd}/usuba_mask/masked_ascon_ua_vslice.c -o {linuxwd}/release/main_{p}.o")
     elif p=='aarch64':
         os.system(f"wsl aarch64-linux-gnu-g++ -fno-builtin -O3 -static -Wformat=0 {linuxwd}/arm_main.cpp {linuxwd}/RandomBuffer/*.cpp {linuxwd}/usuba_mask/masked_ascon_ua_vslice.c -o {linuxwd}/release/main_{p}.o")
     elif p=='armv7':
@@ -75,4 +78,4 @@ print(f"{y2=}")
 plt.title(f"Codesize - {p}")
 plt.plot(x, y1, x, y2)
 plt.show()
-savemat(f"{cwd}\\results\\codesize_{p}.mat", {"d": x, "gc": y1, "uc": y2})
+savemat(f"{cwd}\\results\\codesize_{p}{uma_str}.mat", {"d": x, "gc": y1, "uc": y2})
