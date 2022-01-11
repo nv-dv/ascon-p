@@ -1,9 +1,3 @@
-/* ******************************************** *\
- *
- *
- *
-\* ******************************************** */
-
 
 /* Including headers */
 #pragma once
@@ -13,6 +7,7 @@
 #include <time.h>
 #include "../RandomBuffer/RandomBuffer.h"
 extern RandomBuffer randbuf;
+extern uint64_t Rd[AND_RAND_COUNT*5];
 
 #ifndef MASKING_ORDER
 #error MASKING_ORDER not defined.
@@ -73,7 +68,7 @@ extern RandomBuffer randbuf;
 
 /* Defining operators */
 
-#define MASKED_AND(r,a,b)  isw_mult(r,a,b)
+#define MASKED_AND(r,a,b,c)  isw_mult(r,a,b,c)
 
 #define MASKED_NOT(r,a)                                                 \
   r[0] = ~a[0];                                                         \
@@ -113,7 +108,7 @@ static DATATYPE get_random() {
 }
 #endif
 
-static void __attribute__((noinline)) isw_mult(DATATYPE *res, const DATATYPE *op1, const DATATYPE *op2) {
+static void __attribute__((noinline)) isw_mult(DATATYPE *res, const DATATYPE *op1, const DATATYPE *op2, size_t randindex) {
   int i,j;
   DATATYPE rnd;
 
@@ -127,14 +122,16 @@ static void __attribute__((noinline)) isw_mult(DATATYPE *res, const DATATYPE *op
     res[i] ^= op1[i] & op2[i];
 
     for (j=i+1; j<MASKING_ORDER; j++) {
-      rnd = get_random();
+      // instead of get_random()
+      rnd = Rd[randindex];
       res[i] ^= rnd;
       res[j] ^= (rnd ^ (op1[i] & op2[j])) ^ (op1[j] & op2[i]);
+      randindex++;
     }
   }
 }
 
-#define REFRESH isw_refresh
+#define REFRESHING isw_refresh
 
 static void __attribute__((noinline)) isw_refresh(DATATYPE *res, const DATATYPE *in) {
   int i,j;
