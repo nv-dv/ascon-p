@@ -1,0 +1,23 @@
+load("opt_masking_64.mat")
+
+load("benchmark_64.mat")
+
+subplot(1,2,1)
+plot(d, gc, d, uc, 2, y0, 'dm', 4, y1, 'dm', 8, y2, 'dm', 1, 0.301477, 'dk')
+
+title("Ascon-p Cycles / bit vs. masking order (x86-64)")
+xlabel("masking order")
+ylabel("Cycles / bit")
+legend("proposed (generic C)", "usuba compiled", "Optimized assembly", "Location", 'northwest')
+
+load("opt_masking_32.mat")
+
+load("benchmark_32.mat")
+
+subplot(1,2,2)
+plot(d, gc, d, uc, 2, y0, 'dm', 4, y1, 'dm', 1, 1.093541, 'dk')
+
+title("Ascon-p Cycles / bit vs. masking order (x86)")
+xlabel("masking order")
+ylabel("Cycles / bit")
+legend("proposed (generic C)", "usuba compiled", "Optimized assembly", "Location", 'northwest')
