@@ -1,8 +1,8 @@
 
 echo "gcc-x86"
-g++ -m32 -O2 -fno-builtin -masm=intel main.cpp RandomBuffer/*.cpp usuba_mask/masked_ascon_ua_vslice.c -o release/main32.o
+g++ -m32 -O3 -mavx2 -fno-builtin -masm=intel main.cpp RandomBuffer/*.cpp usuba_mask/masked_ascon_ua_vslice.c -o release/main_32.o
 echo "gcc-x86_64"
-g++ -m64 -O2 -fno-builtin -masm=intel main.cpp RandomBuffer/*.cpp usuba_mask/masked_ascon_ua_vslice.c -o release/main64.o
+g++ -m64 -O3 -mavx2 -fno-builtin -masm=intel main.cpp RandomBuffer/*.cpp usuba_mask/masked_ascon_ua_vslice.c -o release/main_64.o
 
 echo "32 bit"
 ./release/main32.o
