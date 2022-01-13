@@ -1,3 +1,9 @@
+/* ******************************************** *\
+ *
+ *
+ *
+\* ******************************************** */
+
 
 /* Including headers */
 #pragma once
@@ -7,7 +13,7 @@
 #include <time.h>
 #include "../RandomBuffer/RandomBuffer.h"
 extern RandomBuffer randbuf;
-extern uint64_t Rd[AND_RAND_COUNT*5];
+extern uint64_t Rdu[_AND_RAND_COUNT*5];
 
 #ifndef MASKING_ORDER
 #error MASKING_ORDER not defined.
@@ -123,7 +129,7 @@ static void __attribute__((noinline)) isw_mult(DATATYPE *res, const DATATYPE *op
 
     for (j=i+1; j<MASKING_ORDER; j++) {
       // instead of get_random()
-      rnd = Rd[randindex];
+      rnd = Rdu[randindex];
       res[i] ^= rnd;
       res[j] ^= (rnd ^ (op1[i] & op2[j])) ^ (op1[j] & op2[i]);
       randindex++;

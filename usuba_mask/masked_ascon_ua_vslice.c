@@ -4,14 +4,15 @@
 
 #include <stdint.h>
 #include "../consts.h"
+// #define MASKING_ORDER 4
 #define BITS_PER_REG 64
-#define AND_RAND_COUNT (MASKING_ORDER)*(MASKING_ORDER-1) / 2
+#define _AND_RAND_COUNT (MASKING_ORDER)*(MASKING_ORDER-1) / 2
 
 /* including the architecture specific .h */
 #include "MASKED_UA.h"
 
 DATATYPE input__[5][MASKING_ORDER] = { 0 };
-extern uint64_t Rd[5*AND_RAND_COUNT];
+uint64_t Rdu[5*_AND_RAND_COUNT];
 
 /* auxiliary functions */
 void Sbox__V64 (/*inputs*/ DATATYPE x[5][MASKING_ORDER], /*outputs*/ DATATYPE xr[5][MASKING_ORDER]) {
@@ -59,10 +60,10 @@ void Sbox__V64 (/*inputs*/ DATATYPE x[5][MASKING_ORDER], /*outputs*/ DATATYPE xr
   t3[0] = NOT(x[3][0]);
   t4[0] = NOT(_shadow_x42_[0]);
   MASKED_AND(_shadow_t04_,t0,x[1], 0);
-  MASKED_AND(_shadow_t15_,t1,_shadow_x23_, AND_RAND_COUNT);
-  MASKED_AND(_shadow_t26_,t2,x[3], 2*AND_RAND_COUNT);
-  MASKED_AND(_shadow_t37_,t3,_shadow_x42_, 3*AND_RAND_COUNT);
-  MASKED_AND(_shadow_t48_,t4,_shadow_x01_, 4*AND_RAND_COUNT);
+  MASKED_AND(_shadow_t15_,t1,_shadow_x23_, _AND_RAND_COUNT);
+  MASKED_AND(_shadow_t26_,t2,x[3], 2*_AND_RAND_COUNT);
+  MASKED_AND(_shadow_t37_,t3,_shadow_x42_, 3*_AND_RAND_COUNT);
+  MASKED_AND(_shadow_t48_,t4,_shadow_x01_, 4*_AND_RAND_COUNT);
   for (int _mask_idx = 0; _mask_idx <= (MASKING_ORDER - 1); _mask_idx++) {
     _shadow_x09_ = XOR(_shadow_x01_[_mask_idx],_shadow_t15_[_mask_idx]);
     _shadow_x110_ = XOR(x[1][_mask_idx],_shadow_t26_[_mask_idx]);
@@ -192,7 +193,7 @@ void ascon12 (/*inputs*/ DATATYPE input__[5][MASKING_ORDER], /*outputs*/ DATATYP
     state__[4][_mask_idx] = input__[4][_mask_idx];
   }
   for (int i__ = 0; i__ <= 11; i__++) {
-    randbuf.GetBytes((uint8_t*)Rd, sizeof(Rd));
+    randbuf.GetBytes((uint8_t*)Rdu, sizeof(Rdu));
     AddConstant__V64(state__,consts__[i__],_tmp29_);
     Sbox__V64(_tmp29_,_tmp30_);
     LinearLayer__V64(_tmp30_,state__);

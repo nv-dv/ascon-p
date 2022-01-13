@@ -106,14 +106,13 @@ inline dshare operator&(dshare &p1, dshare &p2) {
 
 inline dshare dS_UMA_AND(dshare a, dshare b, size_t randindex) {
 	#ifdef REFRESH
-	refresh(&a, &b, &randbuf);
+	refresh(a, b, &randbuf);
 	#endif // REFRESH
 	dshare ans;
 	dshare tmp;
 	dshare tmp2;
 	dshare ri;
 	ans = a & b;
-	// matrix mult. with minimal randomness...
 	for (size_t i = 0; i<(MASKING_ORDER-1)>>2; ++i) {
 		// load r_i
 		for (size_t j=0;j<MASKING_ORDER;j++) {
@@ -123,19 +122,11 @@ inline dshare dS_UMA_AND(dshare a, dshare b, size_t randindex) {
 		ans ^= ri;
 		// ROR ri
 		ri = ri>>1;
-		tmp2 = b>>(1+2*i);
-		tmp = a & tmp2;
-		ans ^= tmp;
-		tmp2 = a>>(1+2*i);
-		tmp = tmp2 & b;
-		ans ^= tmp;
+		tmp2 = b>>(1+2*i); tmp = a & tmp2; ans ^= tmp;
+		tmp2 = a>>(1+2*i); tmp = tmp2 & b; ans ^= tmp;
 		ans ^= ri;
-		tmp2 = b>>(2+2*i);
-		tmp = a & tmp2;
-		ans ^= tmp;
-		tmp2 = a>>(2+2*i);
-		tmp = tmp2 & b;
-		ans ^= tmp;
+		tmp2 = b>>(2+2*i); tmp = a & tmp2; ans ^= tmp;
+		tmp2 = a>>(2+2*i); tmp = tmp2 & b; ans ^= tmp;
 	}
 	int l = (MASKING_ORDER-1)>>2;
 	if ((MASKING_ORDER-1) % 4 == 3) {
