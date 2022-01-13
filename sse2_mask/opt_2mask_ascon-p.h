@@ -205,7 +205,7 @@ share_2 st4;
 	asm ("xorpd xmm12, xmm13":::);  \
 	asm ("movdqu %0, xmm12":"=m"(p_share)::);  \
 
-#define _2S_ROUND(c) \
+void _2S_ROUND(uint64_t c) {\
 	/*LOAD R*/\
 	randbuf.GetBytes((uint8_t*)R2, sizeof(R2)); \
 	C = c;\
@@ -289,7 +289,7 @@ share_2 st4;
 	_2S_LDL3(sx2, 1, 6) \
 	_2S_LDL2(sx3, 10, 17) \
 	_2S_LDL1(sx4, 7, 41) \
-	/*end*/ \
+	/*end*/ }\
 
 #define _2S_P12 \
     _2S_ROUND(0xf0);\

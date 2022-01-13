@@ -57,7 +57,7 @@ u32 idx64;
      (ROTR(x,40) & (0x0000FF000000FF00ULL)) | \
      (ROTR(x,56) & (0x000000FF000000FFULL)))
 
-#define ROUND(C) \
+void ROUND(u64 C) {\
     x2 ^= C;\
     x0 ^= x4;\
     x4 ^= x3;\
@@ -100,7 +100,7 @@ u32 idx64;
     x4 ^= t4;\
     t0 ^= x0;\
     x0 = ROTR(x0, _R[0][1] - _R[0][0]);\
-    x0 ^= t0;\
+    x0 ^= t0;}\
 
 #define P12 \
     ROUND(0xf0);\

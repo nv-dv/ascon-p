@@ -134,7 +134,7 @@ share_2 st4;
 	asm volatile("xorpd xmm2, xmm3":::);  \
 	asm volatile("movdqu %0, xmm2":"=m"(p_share)::);  \
 
-#define _2S_ROUND(c) \
+void _2S_ROUND(uint64_t c) {\
 	C = c;\
 	/*0*/\
 	asm volatile("movdqu xmm0, %0"::"m"(sx2):);  \
@@ -239,7 +239,7 @@ share_2 st4;
 	_2S_LDL(sx2, 1, 6) \
 	_2S_LDL(sx3, 10, 17) \
 	_2S_LDL(sx4, 7, 41) \
-	/*end*/ \
+	/*end*/ }\
 
 #define _2S_P12 \
     _2S_ROUND(0xf0);\

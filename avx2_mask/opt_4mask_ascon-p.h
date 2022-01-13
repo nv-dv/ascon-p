@@ -226,7 +226,7 @@ share_4 sst4;
 	asm ("vxorpd ymm12, ymm12, %0"::"m"(p_share):);  \
 	asm ("vmovdqa %0, ymm12":"=m"(p_share)::);  \
 
-#define _4S_ROUND(c) \
+void _4S_ROUND(uint64_t c) {\
 	randbuf.GetBytes((uint8_t*)R4, sizeof(R4)); \
 	/*load state*/ \
 	D[3] = c;\
@@ -294,7 +294,7 @@ share_4 sst4;
 	_4S_LDL3(ssx2, 1, 6) \
 	_4S_LDL2(ssx3, 10, 17) \
 	_4S_LDL1(ssx4, 7, 41) \
-	/*end*/ \
+	/*end*/ }\
 
 #define _4S_P12 \
     _4S_ROUND(0xf0);\

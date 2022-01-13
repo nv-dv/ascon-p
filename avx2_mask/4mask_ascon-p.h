@@ -160,7 +160,7 @@ share_4 sst4;
 	asm("vxorpd ymm2, ymm2, ymm3":::);  \
 	asm("vmovdqu %0, ymm2":"=m"(p_share)::);  \
 
-#define _4S_ROUND(c) \
+void _4S_ROUND(uint64_t c) {\
 	D[3] = c;\
 	/*0*/\
 	asm("vmovdqu ymm0, %0"::"m"(ssx2):);  \
@@ -267,7 +267,7 @@ share_4 sst4;
 	_4S_LDL(ssx2, 1, 6) \
 	_4S_LDL(ssx3, 10, 17) \
 	_4S_LDL(ssx4, 7, 41) \
-	/*end*/ \
+	/*end*/ }\
 
 #define _4S_P12 \
     _4S_ROUND(0xf0);\
