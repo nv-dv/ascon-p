@@ -120,7 +120,7 @@ int main(int argc, char* argv[])
 		printf(">>>> 0\n");
 		randbuf.LoadMax();
 		printf("my xmm masking(d=2)");
-		//BENCH_CODESZ(_2S_P12, 0);
+		BENCH_CODESZ(_2S_P12, 0);
 		for (size_t i = 0; i < 5; i++)
 		{
 			x[i] = i;
@@ -153,7 +153,7 @@ int main(int argc, char* argv[])
 		#if defined(__AVX512F__)
 		randbuf.LoadMax();
 		printf("my zmm masking(d=8)");
-		//BENCH_CODESZ(_8S_P12, 0);
+		BENCH_CODESZ(_8S_P12, 0);
 		for (size_t i = 0; i < 5; i++)
 		{
 			x[i] = i;
