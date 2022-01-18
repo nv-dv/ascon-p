@@ -1,12 +1,12 @@
-load("benchmark_64.mat")
+load("benchmark_64_.mat")
 ogc = gc; ogr = gr;
 load("benchmark_64_REFRESH_ISW.mat")
 isw_gc = gc; isw_gr = gr;
 load("benchmark_64_REFRESH_HPC.mat")
 hpb_gc = gc; hpb_gr = gr;
-load("benchmark_64_REFRESH_ISW20.mat")
+load("benchmark_64_REFRESH_ISW_20.mat")
 isw20_gc = gc; isw20_gr = gr;
-load("benchmark_64_REFRESH_HPC20.mat")
+load("benchmark_64_REFRESH_HPC_20.mat")
 hpb20_gc = gc; hpb20_gr = gr;
 
 subplot(1,2,1);

@@ -62,11 +62,11 @@ for d in range(drange[0], drange[1]+1):
     if p in ['32', '64']:
         usuba_funcs["LinearLayer__V64"] = 0
     #         or 74 or 100
-    y1.append(130+12*(gen_funcs["dS_ROUND"]+5*gen_funcs["dS_AND"]+5*gen_funcs["dS_UMA_AND"]))
+    y1.append(130+1*(gen_funcs["dS_ROUND"]+1*gen_funcs["dS_AND"]+1*gen_funcs["dS_UMA_AND"]))
     if verbose:
         print(f"generic C codesize(d={d}): ", y1[-1])
     # y2.append(usuba_funcs["ascon12"]+12*(usuba_funcs["AddConstant__V64"]+usuba_funcs["Sbox__V64"]+usuba_funcs["LinearLayer__V64"]+5*usuba_funcs["isw_mult"]))
-    y2.append(usuba_funcs["ascon12"]+12*(usuba_funcs["Sbox__V64"]+usuba_funcs["LinearLayer__V64"]+5*usuba_funcs["isw_mult"]))
+    y2.append(usuba_funcs["ascon12"]+1*(usuba_funcs["Sbox__V64"]+usuba_funcs["LinearLayer__V64"]+1*usuba_funcs["isw_mult"]))
     if verbose:
         print(f"usuba codesize(d={d}): ", y2[-1])
 

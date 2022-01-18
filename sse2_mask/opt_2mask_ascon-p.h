@@ -39,7 +39,7 @@ typedef struct share2
 	#define CONSTS
 	uint64_t C_not = 0xffffffffffffffff;
 	uint64_t C;
-	RandomBuffer randbuf = RandomBuffer(500 * 2<<20);
+	RandomBuffer randbuf = RandomBuffer(800 * 2<<20);
 	#define TYPE_UINT64 8
 	#define TYPE_UINT128 16
 	#define TYPE_UINT256 32

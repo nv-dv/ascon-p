@@ -7,7 +7,7 @@ import argparse
 import subprocess
 
 # print(f"{os.system('echo here')=}")
-INIT_COUNT = 200000
+INIT_COUNT = 100000
 
 def find_design_by_name(lst, name):
     for i in range(len(lst)):
@@ -44,7 +44,7 @@ design_list = []
 per_d = dict()
 y1, y2 = [[], []]
 r1, r2 =[[], []]
-refresh_str = ""
+refresh_str = "_"
 
 if drange:
     for d in range(drange[0], drange[1]+1):
@@ -53,9 +53,9 @@ if drange:
         with open(cwd+"\\consts.h", "r") as f:
             s = f.read().split('\n')
             if "#define REFRESH_ISW" in s:
-                refresh_str = "_REFRESH_ISW"
-            if "#define REFRESH_HPB" in s:
-                refresh_str = "_REFRESH_HPB"
+                refresh_str = "_REFRESH_ISW_20"
+            if "#define REFRESH_HPC" in s:
+                refresh_str = "_REFRESH_HPC_20"
         s[0] = f"#define MASKING_ORDER {d}"
         s = '\n'.join(s)
         with open(cwd+"\\consts.h", "w") as f:
@@ -86,7 +86,7 @@ if drange:
     print("---->")
     print(f"{x=}")
     print(f"{y1=}")
-    print(f"{y2=}")
+    print(f"{r1=}")
     plt.subplot(2,1,1)
     plt.title(f"Cycles per bit {p}")
     plt.plot(x, y1)
