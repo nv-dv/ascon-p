@@ -11,7 +11,7 @@ benchmark.py - benchmark cycles per bit, randomness usage, for both our generic 
 codesize.py - calculate the codesize for every implemntation.
 datapath.py - simulate the time required for each technology to copy a large buffer.
 ## License
-
+This repository is licensed under AGPL-3.0 License
 ## Reference
 Dor Salomon, Itamar Levi, "On the Performance Gap of an Generic C Optimized Assembler and Wide Vector Extensions for Masked Software with an Ascon-p test-case", Nov. 2021. [update this]
 ## About us
