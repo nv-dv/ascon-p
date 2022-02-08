@@ -195,7 +195,7 @@ inline dshare dS_UMA_AND(dshare a, dshare b, size_t randindex) {
 // general dS_AND with refresh
 inline dshare dS_AND(dshare &p1, dshare &p2, size_t randindex) {
 	#ifdef REFRESH
-	refresh(p1, p2, &randbuf);
+	if (randindex==0) refresh(p1, p2, &randbuf);
 	#endif // REFRESH
 	dshare ans;
 	// matrix mult. with minimal randomness...
@@ -326,6 +326,7 @@ inline void dS_ROUND(int C) {
 	}
 	// end
 }
+
 	
 #define dS_P12 \
     dS_ROUND(0xf0);\
