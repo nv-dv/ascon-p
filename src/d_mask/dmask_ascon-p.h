@@ -266,7 +266,7 @@ namespace d_mask {
 			rot[j].s[i] = uint64_rotr(x[j].s[i], rot2); \
 			x[j].s[i] = t[j].s[i] ^ rot[j].s[i]; \
 
-	inline void dS_ROUND(int C) {
+	inline void _ROUND(int C) {
 		randbuf.GetBytes((uint8_t*)Rd, sizeof(Rd));
 		dshare* x = d_share_x;
 		dshare* t = d_share_t;
