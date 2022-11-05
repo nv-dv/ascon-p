@@ -4,13 +4,9 @@
 
 #include "globals.h"
 #include "random/RandomBuffer.h"
-#include "ciphers/isapa128av20/avx2/4_mask_ascon_p.h"
 #include "sse_ascon-p.h"
-#if defined(__x86_64__)
-	#include "ciphers/isapa128av20/sse2/2_mask_ascon_p.h"
-#else
-	#include "ciphers/isapa128av20/sse2/2_mask_ascon_p.h"
-#endif
+#include "ciphers/isapa128av20/sse2/2_mask_ascon_p.h"
+#include "ciphers/isapa128av20/avx2/4_mask_ascon_p.h"
 #if defined(__AVX512F__)
 	#include "ciphers/isapa128av20/avx512/8_mask_ascon_p.h"
 #endif
