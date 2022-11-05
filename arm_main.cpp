@@ -1,14 +1,13 @@
 // ascon-p.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
-
-#include "RandomBuffer/RandomBuffer.h"
-
-#include "d_mask/dmask_ascon-p.h"
-#include "isapa128av20/opt_64/isap.h"
-#include "consts.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+
+#include "random/RandomBuffer.h"
+#include "d_mask/dmask_ascon-p.h"
+#include "isapa128av20/opt_64/isap.h"
+#include "globals.h"
+
 #define CpB "\nCycles / bit: %f\n"
 #define CPU_CLK 1.6*1000*1000*1000
 
