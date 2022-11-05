@@ -3,8 +3,9 @@ In this repository are various secure masking designs for the Ascon-p permutatio
 all implementation were designed to work with a randomness cache buffer, to increase performance (or, to eliminate waiting time from pseudo random generator)
 ## Building & Runnung
 setup.sh - perform required installations on the machine.
-make.sh - to build for x86 based processors, and run.
-arm_make.sh - to build for ARM based processors, and emulate the run.
+make (Makefile) - to build for x86 / x64 / armv7 / aarch64 processors, and run.
+running arm requires emulations...
+
 ## Scripts
 inside scripts, there are:
 benchmark.py - benchmark cycles per bit, randomness usage, for both our generic masking and usuba.
