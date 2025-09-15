@@ -30,7 +30,7 @@ class Design(object):
 
 		
 cwd = os.getcwd()
-linuxwd = "/mnt/"+cwd.replace('\\', '/').replace("C:", "c").replace("A:", "wsl")
+linuxwd = cwd
 parser = argparse.ArgumentParser(description='Bench test the performance of various implementations of ISAP permutation block.')
 parser.add_argument('--arch', choices=['x86', 'x64', 'armv7', 'aarch64'], type=str, default=['x64'], nargs=1, help='compile for 32/64 bit; compile for armv7/aarch64;')
 parser.add_argument('--maskrange', type=int, default=None, nargs=2, metavar='N', help='masking order range')
@@ -50,7 +50,7 @@ if drange:
     for d in range(drange[0], drange[1]+1):
         if verbose:
             print(f"d = {d}")
-        with open(cwd+"\\globals.h", "r") as f:
+        with open(cwd+"/globals.h", "r") as f:
             s = f.read().split('\n')
             if "#define REFRESH_ISW" in s:
                 refresh_str = "_REFRESH_ISW_20"
@@ -58,15 +58,15 @@ if drange:
                 refresh_str = "_REFRESH_HPC_20"
         s[0] = f"#define MASKING_ORDER {d}"
         s = '\n'.join(s)
-        with open(cwd+"\\globals.h", "w") as f:
+        with open(cwd+"/globals.h", "w") as f:
             f.write(s)
         if p in ['x86', 'x64']:
-            os.system(f"wsl make")
+            os.system(f"make")
         elif p=='aarch64':
-            os.system(f"wsl make aarch64")
+            os.system(f"make aarch64")
         elif p=='armv7':
-            os.system(f"wsl make armv7")
-        c_output = subprocess.run(["wsl", f"{linuxwd}/bin_{p}/main_{p}", "0", str(int(INIT_COUNT/d))], capture_output=True)
+            os.system(f"make armv7")
+        c_output = subprocess.run(f"{linuxwd}/bin_{p}/main_{p}", capture_output=True)
         stdout = c_output.stdout.decode().split('\n')
         i = find_design_by_name(stdout, "C generic masking")
         design_list.append(Design(
@@ -104,15 +104,15 @@ if drange:
     plt.title(f"Randomness used {p}")
     plt.plot(x, r1, x, r2)
     plt.show()
-    savemat(f"{cwd}\\results\\benchmark_{p}{uma_str}.mat", {"d": x, "gc": y1, "uc": y2, "gr": r1, "ur": r2})
+    savemat(f"{cwd}/results/benchmark_{p}{uma_str}.mat", {"d": x, "gc": y1, "uc": y2, "gr": r1, "ur": r2})
 else:
     if p in ['x86', 'x64']:
-        os.system(f"wsl make")
+        os.system(f"make")
     elif p=='aarch64':
-        os.system(f"wsl make aarch64")
+        os.system(f"make aarch64")
     elif p=='armv7':
-        os.system(f"wsl make armv7")
-    c_output = subprocess.run(["wsl", f"{linuxwd}/bin_{p}/main_{p}"], capture_output=True)
+        os.system(f"make armv7")
+    c_output = subprocess.run(f"{linuxwd}/bin_{p}/main_{p}", capture_output=True)
     stdout = c_output.stdout.decode().split('\n')
     i = 0
     d = 1
