@@ -1,214 +1,137 @@
-// ascon-p.cpp : This file contains the 'main' function. Program execution begins and ends there.
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
-
-#include "globals.h"
+#include <string.h>
+#include <vector>
+#include <numeric>
+#include "taniask.h"
 #include "random/RandomBuffer.h"
-#include "sse_ascon-p.h"
-#include "ciphers/isapa128av20/sse2/2_mask_ascon_p.h"
-#include "ciphers/isapa128av20/avx2/4_mask_ascon_p.h"
-#if defined(__AVX512F__)
-	#include "ciphers/isapa128av20/avx512/8_mask_ascon_p.h"
-#endif
-#include "ciphers/isapa128av20/generic/d_mask_ascon_p.h"
-#include "external/isapa128av20/opt_64/isap.h"
-#include "consts.h"
+#include <cmath>
 
-#define CpB "\nCycles / bit: %f\n"
 
-// state words x0..x4 (uint64), temporary variables t0..t4 (uint64)
-// 0
-//x2 ^= c
-//x0 ^= x4; //1 x4 ^= x3;    x2 ^= x1;
-// 2
-//t0 = x0;    t1 = x1;    t2 = x2;    t3 = x3;    t4 = x4;
-// 3
-//t0 = ~t0;    t1 = ~t1;    t2 = ~t2;    t3 = ~t3;    t4 = ~t4;
-//t0 &= x1;    t1 &= x2;    t2 &= x3;    t3 &= x4;    t4 &= x0;
-// 4
-//x0 ^= t1;    x1 ^= t2;    x2 ^= t3;    x3 ^= t4;    x4 ^= t0;
-// 5
-//x1 ^= x0;    x0 ^= x4;    x3 ^= x2;    x2 = ~x2;
-// linear layer
-//t0 = x0 ^ ROTR(x0, 28);
-//t1 = x1 ^ ROTR(x1, 39);
-//t2 = x2 ^ ROTR(x2, 6);
-//t3 = x3 ^ ROTR(x3, 17);
-//t4 = x4 ^ ROTR(x4, 41);
-//t0 ^= ROTR(x0, 19);
-//t1 ^= ROTR(x1, 61);
-//t2 ^= ROTR(x2, 1);
-//t3 ^= ROTR(x3, 10);
-//t4 ^= ROTR(x4, 7);
-//for (int i = 0;i < 5;++i) x[i] = t[i];
-//(? ? ? ) x2 = not x2	
 
-extern void bench_speed(size_t count);
-extern void usuba_get_shares();
-
-uint64_t getCycles() {
-	uint32_t lo, hi;
-    asm volatile ("rdtsc":"=a"(lo),"=d"(hi));
+// ---- cycle counter ----
+static inline uint64_t getCycles() {
+    uint32_t lo, hi;
+    asm volatile ("rdtsc" : "=a"(lo), "=d"(hi));
     return ((uint64_t)hi << 32) | lo;
-    //#ifdef __X86_64__
-        //asm volatile ("shl %0, 32":"=d"(hi));
-        //asm volatile ("or %0, %1":"=d"(low):"d"(hi));
-    //#endif
 }
 
-unsigned long inline getInstructionPointer() {
-	unsigned long addr;
-	#if defined(__i386__)
-		asm volatile ("call 1f\n1:    pop %0":"=a"(addr)::);
-		return addr;
-	#endif
-	#if defined(__x86_64__)
-		asm volatile ("lea %0, [rip]":"=a"(addr)::);
-		return addr;
-	#endif
+static inline double benchCycles(void (*fn)(void), size_t count) {
+    uint64_t before = getCycles();
+    for (size_t i = 0; i < count; i++) {
+        fn();
+    }
+    uint64_t after = getCycles();
+    return (double)(after - before) / count;
 }
 
-#define BENCH_CODESZ(func, offset) \
-	eip = getInstructionPointer(); \
-	func; \
-	eip = getInstructionPointer()-eip; \
-	printf("\ncode-size: %u", eip); \
 
-// defining variables
-INIT;
+int main(int argc, char* argv[]) {
+    size_t count = (argc >= 3) ? strtoul(argv[2], NULL, 10) : 1000000;
+    size_t N = (argc >= 2) ? strtoul(argv[1], NULL, 10) : 128;
 
-int main(int argc, char* argv[])
-{
-	size_t count;
-	int slim = 0;
-	if (argc>=2 && argv[1][0]=='1')
-		slim = 1;
-	if (argc>=3 && strtol(argv[2], 0, 10)) {
-		count = strtol(argv[2], 0, 10);
-	}
-	else {
-		count = COUNT;
-	}
-	uint64_t before;
-	unsigned long eip;
-	uint64_t rand[100];
-	//printf("-----begin testbed-----\n");
-	for (size_t i = 0; i < 100; i++)
-	{
-		rand[i] = 0x4141414141414141+i;
-	}
-	//printf("-----end testbed-----\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-	// -----------------------------
-	if (!slim) {
-		printf("my sse asm");
-		BENCH_CODESZ(_P12, 0);
-		for (size_t i = 0; i < 5; i++)
-		{
-			x[i] = i;
-		}
-		before = getCycles();
-		for (size_t i = 0; i < count; i++)
-		{
-			_P12;
-		}
-		printf(CpB, (double)(getCycles()- before) / count / BITS);
-		printf("%.16llx %.16llx %.16llx %.16llx %.16llx\n", x[0], x[1], x[2], x[3], x[4]);
-		printf(">>>> 0\n");
-		randbuf.LoadMax();
-		printf("my xmm masking(d=2)");
-		BENCH_CODESZ(_2S_P12, 0);
-		for (size_t i = 0; i < 5; i++)
-		{
-			x[i] = i;
-		}
-		Init2Shares(x, rand);
-		before = getCycles();
-		for (size_t i = 0; i < count; i++)
-		{
-			_2S_P12;
-		}
-		printf(CpB, (double)(getCycles()- before) / count / BITS);
-		Get2Shares();
-		printf(">>>> %u\n", randbuf.GetSz()-randbuf.GetRdy());
-		randbuf.LoadMax();
-		printf("my ymm masking(d=4)");
-		BENCH_CODESZ(_4S_P12, 0);
-		for (size_t i = 0; i < 5; i++)
-		{
-			x[i] = i;
-		}
-		Init4Shares(x, rand);
-		before = getCycles();
-		for (size_t i = 0; i < count; i++)
-		{
-			_4S_P12;
-		}
-		printf(CpB, (double)(getCycles()- before) / count / BITS);
-		Get4Shares();
-		printf(">>>> %u\n", randbuf.GetSz()-randbuf.GetRdy());
-		#if defined(__AVX512F__)
-		randbuf.LoadMax();
-		printf("my zmm masking(d=8)");
-		BENCH_CODESZ(_8S_P12, 0);
-		for (size_t i = 0; i < 5; i++)
-		{
-			x[i] = i;
-		}
-		Init8Shares(x, rand);
-		before = getCycles();
-		for (size_t i = 0; i < count; i++)
-		{
-			_8S_P12;
-		}
-		printf(CpB, (double)(getCycles()- before) / count / BITS);
-		Get8Shares();
-		printf(">>>> %u\n", randbuf.GetSz()-randbuf.GetRdy());
-		#endif
-	}
-	randbuf.LoadMax();
-	printf("C generic masking(d=%d)", MASKING_ORDER);
-	BENCH_CODESZ(dS_P12, 0);
-	for (size_t i = 0; i < 5; i++)
-	{
-		x[i] = i;
-	}
-	InitDShares(x, rand);
-	before = getCycles();
-	for (size_t i = 0; i < count; i++)
-	{
-		dS_P12;
-	}
-	printf(CpB, (double)(getCycles() - before) / count / BITS);
-	GetDShares();
-	printf(">>>> %u\n", randbuf.GetSz()-randbuf.GetRdy());
+    uint8_t* D_seed = (uint8_t*)malloc(N); 
+    uint8_t* P_seed = (uint8_t*)malloc(N); 
+    uint8_t* U_seed = (uint8_t*)malloc(N); 
+    uint8_t* Y = (uint8_t*)malloc(N*N); 
+    uint8_t* Zt = (uint8_t*)malloc(N*N); 
+    uint8_t* input = (uint8_t*)malloc(N*N); 
+    uint8_t* output = (uint8_t*)malloc(N*N);
 
-	randbuf.LoadMax();
-	printf("usuba generic masking(d=%d)", MASKING_ORDER);
-	printf("\ncode-size: 0");
-	before = getCycles();
-	for (size_t i = 0; i < count; i++)
-	{
-		bench_speed(i);
+    if (!(D_seed && P_seed && U_seed && Y && Zt && input && output)) {
+        printf("malloc failed!!\n");
+        exit(1);
+    }
+
+    // Initialize cipher with seeds
+    RandomBuffer rng = RandomBuffer(4096);
+    rng.GetBytes(D_seed, N);
+    rng.GetBytes(P_seed, N);
+    rng.GetBytes(U_seed, N);
+    
+    TANIASK_set_D(D_seed);
+    TANIASK_set_P(P_seed);
+    TANIASK_set_U(U_seed);
+
+    // Warmup
+    rng.GetBytes(input, N*N);
+    TANIASK_encrypt(input, Y, Zt);
+    // TANIASK_decrypt(Y, Zt, output);
+    
+
+    std::vector<uint64_t> cycles(count);
+    for (size_t i = 0; i < count; i++) {
+        rng.GetBytes(input, N*N); 
+	
+	if (i % 50 == 0 || 1) {
+		printf("Encryption no. %d out of %d. %f%", i, count, (double)i/count);	
 	}
-	printf(CpB, (double)(getCycles() - before) / count / BITS);
-	usuba_get_shares();
-	printf(">>>> %u\n", randbuf.GetSz()-randbuf.GetRdy());
-	if (!slim) {
-		printf("opt_64");
-		BENCH_CODESZ(P12, 0);
-	    x0 = 0;
-	    x1 = 1;
-	    x2 = 2;
-	    x3 = 3;
-	    x4 = 4;
-	    before = getCycles();
-	    for (size_t i = 0; i < count; i++)
-	    {
-	        P12;
-	    }
-	    printf(CpB, (double)(getCycles() - before) / count / BITS);
-	    printf("%.16llx %.16llx %.16llx %.16llx %.16llx\n", x0, x1, x2, x3, x4);
-	    printf(">>>> 0\n");
-	}
+        uint64_t before = getCycles();
+        TANIASK_encrypt(input, Y, Zt);
+        uint64_t after = getCycles();
+
+        uint64_t cycle = after - before;
+        cycles[i] = cycle;
+    }
+   
+    uint64_t minCycles = cycles[0];
+    uint64_t maxCycles = cycles[0];
+    double sum = 0.0;
+
+    for (size_t i = 0; i < count; i++) {
+        if (cycles[i] < minCycles) minCycles = cycles[i];
+        if (cycles[i] > maxCycles) maxCycles = cycles[i];
+        sum += cycles[i];
+    }
+    double average = sum/count;
+
+    double squareSum = 0.0;
+    for (size_t i = 0; i < count; i++) {
+        double diff = cycles[i] - average;
+        squareSum += diff * diff;
+    }
+    double stddev = std::sqrt(squareSum / count);
+
+    printf("Encryption statistics:\n");
+    printf("  mean: %.1f\n", average);
+    printf("  min:  %llu\n", minCycles);
+    printf("  max:  %llu\n", maxCycles);
+    printf("  std:  %.1f\n", stddev);
+    printf("  cycle/bit: %.1f\n", average/(N*N));
+    uint64_t before = getCycles();
+    for (size_t i = 0; i < count; i++) {
+	    TANIASK_decrypt(Y, Zt, output);
+    }
+    uint64_t after = getCycles();
+    double avg = (double)(after-before)/count;
+    
+    printf("Decryption statistics:\n");
+    printf("  mean: %.1f\n", avg);
+    printf("  cycle/bit: %1.f\n", avg/(N*N));
+
+    // Print sample output (first run only)
+    printf("Sample ciphertext Y: ");
+    for (int i = 0; i < N; i++) printf("%02x", Y[i]);
+    printf("\n");
+    
+    printf("Sample ciphertext Zt: ");
+    for (int i = 0; i < N; i++) printf("%02x", Zt[i]);
+    printf("\n");
+   
+    printf("Sample decrypted output: ");
+    for (int i = 0; i < N; i++) printf("%02x", output[i]);
+    printf("\n");
+
+    free(D_seed);
+    free(P_seed);
+    free(U_seed);
+    free(Y);
+    free(Zt);
+    free(input);
+    free(output);
+
+   
+
     return 0;
 }
