@@ -6,8 +6,9 @@
 #include <numeric>
 #include "taniask.h"
 #include "random/RandomBuffer.h"
+#include <cmath>
 
-#define N 8
+#define N 512
 
 
 // ---- cycle counter ----
@@ -33,10 +34,10 @@ int main(int argc, char* argv[]) {
     uint8_t* D_seed = (uint8_t*)malloc(N); 
     uint8_t* P_seed = (uint8_t*)malloc(N); 
     uint8_t* U_seed = (uint8_t*)malloc(N); 
-    uint8_t* Y = (uint8_t*)malloc(N); 
-    uint8_t* Zt = (uint8_t*)malloc(N); 
-    uint8_t* input = (uint8_t*)malloc(N); 
-    uint8_t* output = (uint8_t*)malloc(N);
+    uint8_t* Y = (uint8_t*)malloc(N*N); 
+    uint8_t* Zt = (uint8_t*)malloc(N*N); 
+    uint8_t* input = (uint8_t*)malloc(N*N); 
+    uint8_t* output = (uint8_t*)malloc(N*N);
 
     if (!(D_seed && P_seed && U_seed && Y && Zt && input && output)) {
         printf("malloc failed!!\n");
@@ -54,15 +55,18 @@ int main(int argc, char* argv[]) {
     TANIASK_set_U(U_seed);
 
     // Warmup
-    rng.GetBytes(input, N);
+    rng.GetBytes(input, N*N);
     TANIASK_encrypt(input, Y, Zt);
-    TANIASK_decrypt(Y, Zt, output);
+    // TANIASK_decrypt(Y, Zt, output);
     
 
     std::vector<uint64_t> cycles(count);
     for (size_t i = 0; i < count; i++) {
-        rng.GetBytes(input, N); 
-        
+        rng.GetBytes(input, N*N); 
+	
+	if (i % 50 == 0 || 1) {
+		printf("Encryption no. %d out of %d. %f%", i, count, (double)i/count);	
+	}
         uint64_t before = getCycles();
         TANIASK_encrypt(input, Y, Zt);
         uint64_t after = getCycles();
@@ -84,16 +88,40 @@ int main(int argc, char* argv[]) {
 
     double squareSum = 0.0;
     for (size_t i = 0; i < count; i++) {
-        double diff = cycles[i] - mean;
+        double diff = cycles[i] - average;
         squareSum += diff * diff;
     }
     double stddev = std::sqrt(squareSum / count);
 
-    printf("Cycles statistics:\n");
-    printf("  mean: %f\n", mean);
+    printf("Encryption statistics:\n");
+    printf("  mean: %.1f\n", average);
     printf("  min:  %llu\n", minCycles);
     printf("  max:  %llu\n", maxCycles);
-    printf("  std:  %f\n", stddev);
+    printf("  std:  %.1f\n", stddev);
+    printf("  cycle/bit: %.1f\n", average/(N*N));
+    uint64_t before = getCycles();
+    for (size_t i = 0; i < count; i++) {
+	    TANIASK_decrypt(Y, Zt, output);
+    }
+    uint64_t after = getCycles();
+    double avg = (double)(after-before)/count;
+    
+    printf("Decryption statistics:\n");
+    printf("  mean: %.1f\n", avg);
+    printf("  cycle/bit: %1.f\n", avg/(N*N));
+
+    // Print sample output (first run only)
+    printf("Sample ciphertext Y: ");
+    for (int i = 0; i < N; i++) printf("%02x", Y[i]);
+    printf("\n");
+    
+    printf("Sample ciphertext Zt: ");
+    for (int i = 0; i < N; i++) printf("%02x", Zt[i]);
+    printf("\n");
+   
+    printf("Sample decrypted output: ");
+    for (int i = 0; i < N; i++) printf("%02x", output[i]);
+    printf("\n");
 
     free(D_seed);
     free(P_seed);
@@ -102,19 +130,8 @@ int main(int argc, char* argv[]) {
     free(Zt);
     free(input);
     free(output);
-    // // Print sample output (first run only)
-    // printf("Sample ciphertext Y: ");
-    // for (int i = 0; i < 16; i++) printf("%02x", Y[i]);
-    // printf("\n");
-    //
-    // printf("Sample ciphertext Zt: ");
-    // for (int i = 0; i < 16; i++) printf("%02x", Zt[i]);
-    // printf("\n");
-    //
-    // printf("Sample decrypted output: ");
-    // for (int i = 0; i < 16; i++) printf("%02x", output[i]);
-    // printf("\n");
-    
+
+   
 
     return 0;
 }

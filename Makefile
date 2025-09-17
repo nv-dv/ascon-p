@@ -25,6 +25,10 @@ INC_DIRS := src # $(shell find $(SRC_DIRS) -type d)
 # Add a prefix to INC_DIRS. So moduleA would become -ImoduleA. GCC understands this -I flag
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
+
+# Include M4RI library
+LDFLAGS += -lm4ri
+
 # The -MMD and -MP flags together generate Makefiles for us!
 # These files will have .d instead of .o as the output.
 CPPFLAGS := $(INC_FLAGS) -O3 -mavx2 -fno-builtin -masm=intel
