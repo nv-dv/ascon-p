@@ -11,10 +11,32 @@
 
 
 // ---- cycle counter ----
-static inline uint64_t getCycles() {
+#include <stdint.h>
+
+static inline uint64_t getCycles(void) {
+    uint64_t cc = 0;
+
+#if defined(__i386__) || defined(__x86_64__)
+    // ---- x86/x86_64 ----
     uint32_t lo, hi;
-    asm volatile ("rdtsc" : "=a"(lo), "=d"(hi));
-    return ((uint64_t)hi << 32) | lo;
+    asm volatile("rdtsc" : "=a"(lo), "=d"(hi));
+    cc = ((uint64_t)hi << 32) | lo;
+
+#elif defined(__aarch64__)
+    // ---- ARMv8 / AArch64 ----
+    asm volatile("mrs %0, cntvct_el0" : "=r"(cc));
+
+#elif defined(__arm__)
+    // ---- ARMv7 / 32-bit ARM ----
+    uint32_t cclo;
+    asm volatile("mrc p15, 0, %0, c9, c13, 0" : "=r"(cclo));
+    cc = (uint64_t)cclo;
+
+#else
+    #error "getCycles not supported on this architecture"
+#endif
+
+    return cc;
 }
 
 static inline double benchCycles(void (*fn)(void), size_t count) {
@@ -26,10 +48,10 @@ static inline double benchCycles(void (*fn)(void), size_t count) {
     return (double)(after - before) / count;
 }
 
-
+size_t N = 128;
 int main(int argc, char* argv[]) {
     size_t count = (argc >= 3) ? strtoul(argv[2], NULL, 10) : 1000000;
-    size_t N = (argc >= 2) ? strtoul(argv[1], NULL, 10) : 128;
+    N = (argc >= 2) ? strtoul(argv[1], NULL, 10) : 128;
 
     uint8_t* D_seed = (uint8_t*)malloc(N); 
     uint8_t* P_seed = (uint8_t*)malloc(N); 

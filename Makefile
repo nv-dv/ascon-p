@@ -1,86 +1,82 @@
-TARGET_EXEC32 := main_x86
-TARGET_EXEC64 := main_x64
+# Targets
+TARGET_X86 := main_x86
+TARGET_X64 := main_x64
+TARGET_ARMV7 := main_armv7
+TARGET_AARCH64 := main_aarch64
 
-BUILD_DIR32 := bin_x86
-BUILD_DIR64 := bin_x64
-SRC_DIRS := src
+# Build directories
+BUILD_X86 := bin_x86
+BUILD_X64 := bin_x64
+BUILD_ARMV7 := bin_armv7
+BUILD_AARCH64 := bin_aarch64
 
-# Find all the C and C++ files we want to compile
-# Note the single quotes around the * expressions. Make will incorrectly expand these otherwise.
-SRCS := $(shell find $(SRC_DIRS) -name '*.cpp' -or -name '*.c' -or -name '*.s')
-SRCS64 := $(shell find $(SRC_DIRS) -name '*.cpp' -or -name '*.c' -or -name '*.s')
-SRCS_ARM := $(shell find $(SRC_DIRS) -name 'arm*.cpp' -or -name '*.c' -or -name '*.s')
+SRC_DIR := src
+SRCS := $(shell find $(SRC_DIR) -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.s' \))
 
-# String substitution for every C/C++ file.
-# As an example, hello.cpp turns into ./build/hello.cpp.o
-OBJS32 := $(SRCS:%=$(BUILD_DIR32)/%.o)
-OBJS64 := $(SRCS:%=$(BUILD_DIR64)/%.o)
+# Include flags
+INC_FLAGS := -I$(SRC_DIR)
 
-# String substitution (suffix version without %).
-# As an example, ./build/hello.cpp.o turns into ./build/hello.cpp.d
-# DEPS := $(OBJS:.o=.d)
+# M4RI library paths
+M4RI_X64 := /usr/local/lib/m4ri/x64
+M4RI_X86 := /usr/local/lib/m4ri/x86
+M4RI_ARMV7 := /usr/local/lib/m4ri/armv7
+M4RI_AARCH64 := /usr/local/lib/m4ri/arm64
 
-# Every folder in src/ will need to be passed to GCC so that it can find header files
-INC_DIRS := src # $(shell find $(SRC_DIRS) -type d)
-# Add a prefix to INC_DIRS. So moduleA would become -ImoduleA. GCC understands this -I flag
-INC_FLAGS := $(addprefix -I,$(INC_DIRS))
+# Compiler flags
+CPPFLAGS_INTEL := $(INC_FLAGS) -O3 -mavx2 -fno-builtin -masm=intel
+CPPFLAGS_ARM := $(INC_FLAGS) -O3 -fno-builtin 
 
+CFLAGS := -O3
 
-# Include M4RI library
-LDFLAGS += -lm4ri
+# Link flags
+LDFLAGS_X64 := -L$(M4RI_X64) -lm4ri -Wl,-rpath,$(M4RI_X64) 
+LDFLAGS_X86 := -L$(M4RI_X86) -lm4ri -Wl,-rpath,$(M4RI_X86)
+LDFLAGS_ARMV7 := -L$(M4RI_ARMV7) -lm4ri -Wl,-rpath,$(M4RI_ARMV7)
+LDFLAGS_AARCH64 := -L$(M4RI_AARCH64) -lm4ri -Wl,-rpath,$(M4RI_AARCH64)
 
-# The -MMD and -MP flags together generate Makefiles for us!
-# These files will have .d instead of .o as the output.
-CPPFLAGS := $(INC_FLAGS) -O3 -mavx2 -fno-builtin -masm=intel
-
+# Default target
 .PHONY: all
-all: $(BUILD_DIR32)/$(TARGET_EXEC32) $(BUILD_DIR64)/$(TARGET_EXEC64)
+all: x86 x64 armv7 aarch64
 
-.PHONY: x86
-x86: $(BUILD_DIR32)/$(TARGET_EXEC32)
+# -------------------------------
+# x86 build
+# -------------------------------
+x86: $(BUILD_X86)/$(TARGET_X86)
 
-.PHONY: x64
-x64: $(BUILD_DIR64)/$(TARGET_EXEC64)
+$(BUILD_X86)/$(TARGET_X86): $(SRCS)
+	mkdir -p $(BUILD_X86)
+	g++ -m32 $(CPPFLAGS_INTEL) $(SRCS) -o $@ $(LDFLAGS_X86)
 
-.PHONY: armv7
-armv7:
-	mkdir -p bin_armv7/
-	arm-linux-gnueabihf-g++ -Isrc -fno-builtin -O3 -static -Wformat=0 arm_main.cpp src/random/*.cpp src/external/usuba_mask/masked_ascon_ua_vslice.cpp -o bin_armv7/main_armv7
+# -------------------------------
+# x64 build
+# -------------------------------
+x64: $(BUILD_X64)/$(TARGET_X64)
 
-.PHONY: aarch64
-aarch64:
-	mkdir -p bin_aarch64/
-	aarch64-linux-gnu-g++ -Isrc -fno-builtin -O3 -static -Wformat=0 arm_main.cpp src/random/*.cpp src/external/usuba_mask/masked_ascon_ua_vslice.cpp -o bin_armv7/main_aarch64
+$(BUILD_X64)/$(TARGET_X64): $(SRCS)
+	mkdir -p $(BUILD_X64)
+	g++ -m64 $(CPPFLAGS_INTEL) $(SRCS) -o $@ $(LDFLAGS_X64)
 
-# The final build step.
-$(BUILD_DIR32)/$(TARGET_EXEC32): $(OBJS32)
-	$(CXX) -m32 $^ -o $@ $(LDFLAGS)
+# -------------------------------
+# ARMv7 build
+# -------------------------------
+armv7: $(BUILD_ARMV7)/$(TARGET_ARMV7)
 
-# Build step for C source
-$(BUILD_DIR32)/%.c.o: %.c
-	mkdir -p $(dir $@)
-	$(CC) -m32 $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+$(BUILD_ARMV7)/$(TARGET_ARMV7): $(SRCS)
+	mkdir -p $(BUILD_ARMV7)
+	arm-linux-gnueabihf-g++ $(CPPFLAGS_ARMV7) $(SRCS) -o $@ $(LDFLAGS_ARMV7) -static
 
-# Build step for C++ source
-$(BUILD_DIR32)/%.cpp.o: %.cpp
-	mkdir -p $(dir $@)
-	$(CXX) -m32 $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+# -------------------------------
+# AArch64 build
+# -------------------------------
+aarch64: $(BUILD_AARCH64)/$(TARGET_AARCH64)
 
-# The final build step.
-$(BUILD_DIR64)/$(TARGET_EXEC64): $(OBJS64)
-	$(CXX) -m64 $^ -o $@ $(LDFLAGS)
+$(BUILD_AARCH64)/$(TARGET_AARCH64): $(SRCS)
+	mkdir -p $(BUILD_AARCH64)
+	aarch64-linux-gnu-g++ $(CPPFLAGS_AARCH64) $(SRCS) -o $@ $(LDFLAGS_AARCH64) -static
 
-# Build step for C source
-$(BUILD_DIR64)/%.c.o: %.c
-	mkdir -p $(dir $@)
-	$(CC) -m64 $(CPPFLAGS) $(CFLAGS) -c $< -o $@
-
-# Build step for C++ source
-$(BUILD_DIR64)/%.cpp.o: %.cpp
-	mkdir -p $(dir $@)
-	$(CXX) -m64 $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
-
-
+# -------------------------------
+# Clean
+# -------------------------------
 .PHONY: clean
 clean:
-	rm -r bin_*
+	rm -rf $(BUILD_X86) $(BUILD_X64) $(BUILD_ARMV7) $(BUILD_AARCH64)
