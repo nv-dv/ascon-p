@@ -48,10 +48,10 @@ static inline double benchCycles(void (*fn)(void), size_t count) {
     return (double)(after - before) / count;
 }
 
-size_t N = 128;
+size_t N = 64;
 int main(int argc, char* argv[]) {
-    size_t count = (argc >= 3) ? strtoul(argv[2], NULL, 10) : 1000000;
-    N = (argc >= 2) ? strtoul(argv[1], NULL, 10) : 128;
+    size_t count = (argc >= 3) ? strtoul(argv[2], NULL, 10) : 1000;
+    N = (argc >= 2) ? strtoul(argv[1], NULL, 10) : 64;1
 
     uint8_t* D_seed = (uint8_t*)malloc(N); 
     uint8_t* P_seed = (uint8_t*)malloc(N); 
@@ -86,9 +86,6 @@ int main(int argc, char* argv[]) {
     for (size_t i = 0; i < count; i++) {
         rng.GetBytes(input, N*N); 
 	
-	if (i % 50 == 0 || 1) {
-		printf("Encryption no. %d out of %d. %f%", i, count, (double)i/count);	
-	}
         uint64_t before = getCycles();
         TANIASK_encrypt(input, Y, Zt);
         uint64_t after = getCycles();
@@ -117,9 +114,9 @@ int main(int argc, char* argv[]) {
 
     printf("Encryption statistics:\n");
     printf("  mean: %.1f\n", average);
-    printf("  min:  %llu\n", minCycles);
-    printf("  max:  %llu\n", maxCycles);
-    printf("  std:  %.1f\n", stddev);
+    // printf("  min:  %llu\n", minCycles);
+    // printf("  max:  %llu\n", maxCycles);
+    // printf("  std:  %.1f\n", stddev);
     printf("  cycle/bit: %.1f\n", average/(N*N));
     uint64_t before = getCycles();
     for (size_t i = 0; i < count; i++) {
@@ -132,18 +129,18 @@ int main(int argc, char* argv[]) {
     printf("  mean: %.1f\n", avg);
     printf("  cycle/bit: %1.f\n", avg/(N*N));
 
-    // Print sample output (first run only)
-    printf("Sample ciphertext Y: ");
-    for (int i = 0; i < N; i++) printf("%02x", Y[i]);
-    printf("\n");
+    // // Print sample output (first run only)
+    // printf("Sample ciphertext Y: ");
+    // for (int i = 0; i < N; i++) printf("%02x", Y[i]);
+    // printf("\n");
     
-    printf("Sample ciphertext Zt: ");
-    for (int i = 0; i < N; i++) printf("%02x", Zt[i]);
-    printf("\n");
+    // printf("Sample ciphertext Zt: ");
+    // for (int i = 0; i < N; i++) printf("%02x", Zt[i]);
+    // printf("\n");
    
-    printf("Sample decrypted output: ");
-    for (int i = 0; i < N; i++) printf("%02x", output[i]);
-    printf("\n");
+    // printf("Sample decrypted output: ");
+    // for (int i = 0; i < N; i++) printf("%02x", output[i]);
+    // printf("\n");
 
     free(D_seed);
     free(P_seed);
