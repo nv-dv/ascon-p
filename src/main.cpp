@@ -51,7 +51,7 @@ static inline double benchCycles(void (*fn)(void), size_t count) {
 size_t N = 64;
 int main(int argc, char* argv[]) {
     size_t count = (argc >= 3) ? strtoul(argv[2], NULL, 10) : 1000;
-    N = (argc >= 2) ? strtoul(argv[1], NULL, 10) : 64;1
+    N = (argc >= 2) ? strtoul(argv[1], NULL, 10) : 64;
 
     uint8_t* D_seed = (uint8_t*)malloc(N); 
     uint8_t* P_seed = (uint8_t*)malloc(N); 
