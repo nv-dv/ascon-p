@@ -4,6 +4,9 @@ import argparse
 import numpy as np
 import re
 import string
+import enlighten
+import itertools
+
 
 def parse_benchmark_output(output: str) -> dict:
     """
@@ -38,7 +41,7 @@ def run_benchmark(N: int, count: int, arch: string = 'x64'):
     count: number of iterations to average over
     arch: ISA to benchmark - x64, x86, armv7, aarch64
     """
-    print(f"Running benchmark for N={N}, count={count}")
+    print(f"Running benchmark for N={N}, count={count}, arch={arch}")
 
     conn = fabric.Connection('linuxvm')
     with conn.cd('~/project/ascon-p'):
@@ -47,61 +50,71 @@ def run_benchmark(N: int, count: int, arch: string = 'x64'):
 
     return stats
 
-def plot_benchmarks(N_values, stats_x64, stats_x86):
+
+def plot_benchmarks(N_values, stats):
     """
-    N_values: list or array of matrix sizes
-    stats_x64, stats_x86: list of dicts returned by run_benchmark, format:
+    N_values: list of matrix sizes
+    stats: dict of architecture -> list of dicts each like:
         {
-            'encrypt': {'mean': ..., 'cycle/bit': ...},
-            'decrypt': {'mean': ..., 'cycle/bit': ...}
+        "encrypt": {"mean": ..., "cycle/bit": ...},
+        "decrypt": {...}
         }
     """
-    # Prepare data
-    cycles_x64_enc = [m['encrypt']['mean'] for m in stats_x64]
-    cycles_x64_dec = [m['decrypt']['mean'] for m in stats_x64]
-    cb_x64_enc = [m['encrypt']['cycle/bit'] for m in stats_x64]
-    cb_x64_dec = [m['decrypt']['cycle/bit'] for m in stats_x64]
 
-    cycles_x86_enc = [m['encrypt']['mean'] for m in stats_x86]
-    cycles_x86_dec = [m['decrypt']['mean'] for m in stats_x86]
-    cb_x86_enc = [m['encrypt']['cycle/bit'] for m in stats_x86]
-    cb_x86_dec = [m['decrypt']['cycle/bit'] for m in stats_x86]
+    ideal_curve = np.log2(N_values) / (N_values ** 2)
 
-    # Theoretical curve: log2(N)/N^2 
-    N_theory = np.array(N_values)
-    theory_curve = np.log2(N_theory) / (N_theory ** 2)
-
-    # Create figure
     fig, axs = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
 
-    # --- Mean cycles plot ---
-    axs[0].plot(N_values, cycles_x64_enc, marker='o', color='tab:blue', label='Encrypt x64')
-    axs[0].plot(N_values, cycles_x64_dec, marker='s', color='tab:cyan', label='Decrypt x64')
-    axs[0].plot(N_values, cycles_x86_enc, marker='o', color='tab:red', label='Encrypt x86')
-    axs[0].plot(N_values, cycles_x86_dec, marker='s', color='tab:pink', label='Decrypt x86')
+    # consistent colors
+    colors = itertools.cycle(plt.rcParams["axes.prop_cycle"].by_key()["color"])
+
+    for arch, results in stats.items():
+        color = next(colors)
+
+        cycles_enc = [m["encrypt"]["mean"] for m in results]
+        cycles_dec = [m["decrypt"]["mean"] for m in results]
+        cb_enc = [m["encrypt"]["cycle/bit"] for m in results]
+        cb_dec = [m["decrypt"]["cycle/bit"] for m in results]
+
+        # Mean cycle plot 
+        axs[0].plot(N_values, cycles_enc, marker="o", color=color,
+                    label=f"{arch} encrypt")
+        axs[0].plot(N_values, cycles_dec, marker="s", linestyle="--", color=color,
+                    label=f"{arch} decrypt")
+
+        # Cycle/bit plot 
+        axs[1].plot(N_values, cb_enc, marker="o", color=color,
+                    label=f"{arch} encrypt")
+        axs[1].plot(N_values, cb_dec, marker="s", linestyle="--", color=color,
+                    label=f"{arch} decrypt")
+
+    # TODO: Add in AES plot
+
+    # format top
     axs[0].set_ylabel("Mean cycles")
-    axs[0].set_xscale('log', base=2)
-    axs[0].set_yscale('log')
+    axs[0].set_xscale("log", base=2)
+    axs[0].set_yscale("log")
     axs[0].set_title("Mean cycles per N")
+    axs[0].grid(True, which="both", linestyle="--", alpha=0.5)
     axs[0].legend()
-    axs[0].grid(True, which='both', linestyle='--', alpha=0.5)
 
-    # --- Cycle/bit plot ---
-    axs[1].plot(N_values, cb_x64_enc, marker='o', color='tab:blue', label='Encrypt x64')
-    axs[1].plot(N_values, cb_x64_dec, marker='s', color='tab:cyan', label='Decrypt x64')
-    axs[1].plot(N_values, cb_x86_enc, marker='o', color='tab:red', label='Encrypt x86')
-    axs[1].plot(N_values, cb_x86_dec, marker='s', color='tab:pink', label='Decrypt x86')
-
-    # Overlay theoretical curve (scaled for visibility)
-    scale = max(cb_x64_enc + cb_x64_dec + cb_x86_enc + cb_x86_dec) / max(theory_curve)
-    axs[1].plot(N_theory, theory_curve * scale, '--', color='black', label='log2(N)/N^2 (scaled)')
-
+    # format bottom
+    axs[1].set_ylabel("Cycles per bit")
     axs[1].set_xlabel("Matrix size N")
-    axs[1].set_ylabel("Cycles / bit")
-    axs[1].set_xscale('log', base=2)
-    axs[1].set_yscale('log')
-    axs[1].grid(True, which='both', linestyle='--', alpha=0.5)
-    axs[1].set_title("Cycle/bit per N")
+    axs[1].set_xscale("log", base=2)
+    axs[1].set_yscale("log")
+    axs[1].set_title("Cycles per bit vs N")
+    axs[1].grid(True, which="both", linestyle="--", alpha=0.5)
+
+    # scaled theory curve
+    all_cb = []
+    for results in stats.values():
+        all_cb.extend(m["encrypt"]["cycle/bit"] for m in results)
+        all_cb.extend(m["decrypt"]["cycle/bit"] for m in results)
+    scale = max(all_cb) / max(ideal_curve)
+    axs[1].plot(N_values, ideal_curve * scale, "--", color="black",
+                label="log2(N)/N^2 (scaled)")
+
     axs[1].legend()
 
     plt.tight_layout()
@@ -143,8 +156,8 @@ def main():
     parser.add_argument(
         "--arch",
         type=str,
-        default='x64',
-        help="Architecture to benchmark, x64, x86, armv7, aarch64 (default: x64)"
+        nargs='+',
+        help="Architecture to benchmark, x64, x86, armv7, aarch64"
     )
 
     args = parser.parse_args()
@@ -155,14 +168,18 @@ def main():
                            base=2.0,
                            dtype=int)
 
-    stats_x64 = []
-    stats_x86 = []
-    for n in N_values:
-        stats_x64.append(run_benchmark(n, args.count, arch='x64'))
-        stats_x86.append(run_benchmark(n, args.count, arch='x86'))
+    stats = {}
 
-    plot_benchmarks(N_values, stats_x64, stats_x86)
-    
+    for arch in args.arch:
+        stats[arch] = []
+        manager = enlighten.get_manager()
+        pbar = manager.counter(total=len(N_values), desc='Benchmarking')
+
+        for n in pbar(N_values):
+            stats[arch].append(run_benchmark(n, args.count, arch=arch))
+
+    plot_benchmarks(N_values, stats)
+
 
 if __name__ == "__main__":
     main()

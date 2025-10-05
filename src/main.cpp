@@ -3,11 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <vector>
-#include <numeric>
 #include "taniask.h"
 #include "random/RandomBuffer.h"
-#include <cmath>
-
 
 
 // ---- cycle counter ----
@@ -83,13 +80,13 @@ int main(int argc, char* argv[]) {
     
 
     std::vector<uint64_t> cycles(count);
+
     for (size_t i = 0; i < count; i++) {
         rng.GetBytes(input, N*N); 
 	
         uint64_t before = getCycles();
         TANIASK_encrypt(input, Y, Zt);
         uint64_t after = getCycles();
-
         uint64_t cycle = after - before;
         cycles[i] = cycle;
     }
@@ -105,19 +102,10 @@ int main(int argc, char* argv[]) {
     }
     double average = sum/count;
 
-    double squareSum = 0.0;
-    for (size_t i = 0; i < count; i++) {
-        double diff = cycles[i] - average;
-        squareSum += diff * diff;
-    }
-    double stddev = std::sqrt(squareSum / count);
-
     printf("Encryption statistics:\n");
     printf("  mean: %.1f\n", average);
-    // printf("  min:  %llu\n", minCycles);
-    // printf("  max:  %llu\n", maxCycles);
-    // printf("  std:  %.1f\n", stddev);
     printf("  cycle/bit: %.1f\n", average/(N*N));
+
     uint64_t before = getCycles();
     for (size_t i = 0; i < count; i++) {
 	    TANIASK_decrypt(Y, Zt, output);
