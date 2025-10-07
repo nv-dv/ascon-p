@@ -3,8 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <vector>
-#include <openssl/aes.h>
-#include <openssl/evp.h>
+#include "aes.h"
 #include "taniask.h"
 #include "random/RandomBuffer.h"
 
@@ -62,10 +61,10 @@ int main(int argc, char* argv[]) {
     uint8_t* D_seed = (uint8_t*)malloc(N); 
     uint8_t* P_seed = (uint8_t*)malloc(N); 
     uint8_t* U_seed = (uint8_t*)malloc(N); 
-    uint8_t* Y = (uint8_t*)malloc(B_bytes); 
-    uint8_t* Zt = (uint8_t*)malloc(B_bytes); 
-    uint8_t* input = (uint8_t*)malloc(B_bytes); 
-    uint8_t* output = (uint8_t*)malloc(B_bytes);
+    uint8_t* Y = (uint8_t*)malloc(B_bits); 
+    uint8_t* Zt = (uint8_t*)malloc(B_bits); 
+    uint8_t* input = (uint8_t*)malloc(B_bits); 
+    uint8_t* output = (uint8_t*)malloc(B_bits);
 
     if (!(D_seed && P_seed && U_seed && Y && Zt && input && output)) {
         printf("malloc failed!!\n");
@@ -82,7 +81,7 @@ int main(int argc, char* argv[]) {
 
     uint64_t sumCycles = 0;
     for (size_t i = 0; i < count; i++) {
-        rng.GetBytes(input, B_bytes); 
+        rng.GetBytes(input, B_bits); 
 	
         uint64_t before = getCycles();
         TANIASK_encrypt(input, Y, Zt);
@@ -97,7 +96,7 @@ int main(int argc, char* argv[]) {
     printf("  mean: %.1f\n", average);
     printf("  cycle/bit: %.1f\n", average/(B_bits));
 
-    // AES-128 CTR benchmark using OpenSSL EVP
+    // AES-128 CTR benchmark using TinyAES
     uint8_t aes_key[16];
     rng.GetBytes(aes_key, 16);
 
@@ -108,27 +107,19 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
+    struct AES_ctx ctx;
+    AES_init_ctx(&ctx, aes_key);
+
     uint64_t aes_sumCycles = 0;
 
     for (size_t i = 0; i < count; i++) {
         rng.GetBytes(aes_input, B_bytes);
 
-        uint8_t iv[16];
-        rng.GetBytes(iv, 16);
-
-        EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
-
-        EVP_EncryptInit_ex(ctx, EVP_aes_128_ctr(), NULL, aes_key, iv);
-
-        int outlen = 0;
-
         uint64_t start_cycles = getCycles();
-        EVP_EncryptUpdate(ctx, aes_output, &outlen, aes_input, B_bytes);
+        AES_CTR_xcrypt_buffer(&ctx, aes_input, B_bytes);
         uint64_t end_cycles = getCycles();
 
         aes_sumCycles += (end_cycles - start_cycles);
-
-        EVP_CIPHER_CTX_free(ctx);
     }
 
     double aes_average = (double)aes_sumCycles / count;
