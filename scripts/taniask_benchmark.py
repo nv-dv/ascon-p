@@ -200,8 +200,8 @@ def main():
 
     # Define default SIMD variants per architecture
     default_simd = {
-        'x86': ['sse2', 'sse4.1', 'avx', 'avx2'],
-        'x64': ['sse2', 'sse4.1', 'avx', 'avx2'],
+        'x86': ['sse2', 'sse4', 'avx', 'avx2', 'avx512'],
+        'x64': ['sse2', 'sse4', 'avx', 'avx2', 'avx512'],
         'armv7': ['neon'],
         'aarch64': ['neon']
     }

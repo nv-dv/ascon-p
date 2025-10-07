@@ -3,7 +3,7 @@ TARGET_X86 := main
 TARGET_X64 := main
 
 # SIMD variants for x86/x64
-SIMD_VARIANTS := sse2 sse4.1 avx avx2
+SIMD_VARIANTS := sse2 sse4 avx avx2 avx512
 
 # Build directories
 BUILD_X86 := bin_x86
