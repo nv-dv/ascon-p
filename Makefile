@@ -16,6 +16,7 @@ SRCS := $(shell find $(SRC_DIR) -type f \( -name '*.c' -o -name '*.cpp' -o -name
 # Include flags
 INC_FLAGS := -I$(SRC_DIR)
 
+
 # M4RI library paths
 M4RI_X64 := /usr/local/lib/m4ri/x64
 M4RI_X86 := /usr/local/lib/m4ri/x86
@@ -23,10 +24,9 @@ M4RI_ARMV7 := /usr/local/lib/m4ri/armv7
 M4RI_AARCH64 := /usr/local/lib/m4ri/arm64
 
 # Compiler flags
-CPPFLAGS_INTEL := $(INC_FLAGS) -O3 -mavx2 -fno-builtin -masm=intel
+CPPFLAGS_INTEL :=$(INC_FLAGS) -O3 -mavx2 -fno-builtin -masm=intel
 CPPFLAGS_ARM := $(INC_FLAGS) -O3 -fno-builtin 
 
-CFLAGS := -O3
 
 # Link flags
 LDFLAGS_X64 := -L$(M4RI_X64) -lm4ri -Wl,-rpath,$(M4RI_X64) 
@@ -34,7 +34,7 @@ LDFLAGS_X86 := -L$(M4RI_X86) -lm4ri -Wl,-rpath,$(M4RI_X86)
 LDFLAGS_ARMV7 := -L$(M4RI_ARMV7) -lm4ri -Wl,-rpath,$(M4RI_ARMV7)
 LDFLAGS_AARCH64 := -L$(M4RI_AARCH64) -lm4ri -Wl,-rpath,$(M4RI_AARCH64)
 
-# Default target
+
 .PHONY: all
 all: x86 x64 armv7 aarch64
 

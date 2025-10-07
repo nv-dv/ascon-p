@@ -157,7 +157,7 @@ def main():
         "--arch",
         type=str,
         nargs='+',
-        help="Architecture to benchmark, x64, x86, armv7, aarch64"
+        help="Architecture to benchmark, x64, x86, aarch64"
     )
 
     args = parser.parse_args()
