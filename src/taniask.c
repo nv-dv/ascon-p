@@ -28,6 +28,33 @@ static matrix UInverse;
 /*****************************************************************************/
 /* Private functions:                                                        */
 /*****************************************************************************/
+static inline uint64_t getCycles(void) {
+    uint64_t cc = 0;
+
+#if defined(__i386__) || defined(__x86_64__)
+    // ---- x86/x86_64 ----
+    uint32_t lo, hi;
+    asm volatile("rdtsc" : "=a"(lo), "=d"(hi));
+    cc = ((uint64_t)hi << 32) | lo;
+
+#elif defined(__aarch64__)
+    // ---- ARMv8 / AArch64 ----
+    asm volatile("mrs %0, cntvct_el0" : "=r"(cc));
+
+#elif defined(__arm__)
+    // ---- ARMv7 / 32-bit ARM ----
+    // priveleged instructions - emulator doesnt work :(
+
+    uint32_t cclo;
+    asm volatile("mrc p15, 0, %0, c9, c13, 0" : "=r"(cclo));
+    cc = (uint64_t)cclo;
+
+#else
+    #error "getCycles not supported on this architecture"
+#endif
+
+    return cc;
+}
 
 static uint64_t rndword(void *data) {
     uint64_t val = 0;
@@ -201,6 +228,27 @@ void TANIASK_encrypt(uint8_t* input, uint8_t* Youtput, uint8_t* Ztoutput)
   mzd_free(plaintext);
   mzd_free(Y);
   mzd_free(Zt);
+}
+
+uint64_t TANIASK_encrypt_cycles(uint8_t* input, uint8_t* Youtput, uint8_t* Ztoutput)
+{
+  matrix plaintext = matrix_from_array(N, N, input);
+
+  matrix Y = mzd_init(N, N);
+  matrix Zt = mzd_init(N, N);
+
+  uint64_t before = getCycles();
+  Cipher(plaintext, Y, Zt);
+  uint64_t after = getCycles();
+
+  array_from_matrix(Y,Youtput);
+  array_from_matrix(Zt,Ztoutput);
+
+  mzd_free(plaintext);
+  mzd_free(Y);
+  mzd_free(Zt);
+
+  return after-before;
 }
 
 void TANIASK_decrypt(uint8_t* Yinput, uint8_t* Ztinput, uint8_t* output)

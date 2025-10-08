@@ -83,10 +83,7 @@ int main(int argc, char* argv[]) {
     for (size_t i = 0; i < count; i++) {
         rng.GetBytes(input, B_bits); 
 	
-        uint64_t before = getCycles();
-        TANIASK_encrypt(input, Y, Zt);
-        uint64_t after = getCycles();
-        uint64_t cycle = after - before;
+        uint64_t cycle = TANIASK_encrypt_cycles(input, Y, Zt);
         sumCycles += cycle;
     }
    
