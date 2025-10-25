@@ -56,7 +56,7 @@ def run_benchmark(N: int, count: int, arch: string = 'x64', simd_variant: str = 
 
     conn = fabric.Connection('linuxvm')
     with conn.cd('~/project/ascon-p'):
-        if simd_variant:
+        if arch == 'x64' or arch == 'x86':
             result = conn.run(f'./bin_{arch}/main_{simd_variant} {N} {count}', hide=True)
         else:
             result = conn.run(f'./bin_{arch}/main_{arch} {N} {count}', hide=True)
@@ -200,8 +200,8 @@ def main():
 
     # Define default SIMD variants per architecture
     default_simd = {
-        'x86': ['sse2', 'sse4', 'avx', 'avx2', 'avx512'],
-        'x64': ['sse2', 'sse4', 'avx', 'avx2', 'avx512'],
+        'x86': ['sse2', 'sse4', 'avx', 'avx2'],
+        'x64': ['sse2', 'sse4', 'avx', 'avx2'],
         'armv7': ['neon'],
         'aarch64': ['neon']
     }
